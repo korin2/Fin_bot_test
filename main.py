@@ -7,7 +7,7 @@ from telegram.ext import Application, CommandHandler, CallbackQueryHandler, Mess
 from config import TOKEN, logger
 from db import init_db
 from handlers import (
-    start, help_command, button_handler, show_currency_rates,
+    start, stop_command, help_command, button_handler, show_currency_rates,
     handle_ai_message, alert_command, myalerts_command, show_key_rate, 
     show_crypto_rates, show_ai_chat, show_other_functions, show_bot_stats, 
     show_bot_about, show_settings, show_weather, handle_text_messages,
@@ -42,6 +42,7 @@ def main():
 
         # Регистрация обработчиков команд
         application.add_handler(CommandHandler("start", start))
+        application.add_handler(CommandHandler("stop", stop_command))
         application.add_handler(CommandHandler("help", help_command))
         application.add_handler(CommandHandler("rates", show_currency_rates))
         application.add_handler(CommandHandler("currency", show_currency_rates))
