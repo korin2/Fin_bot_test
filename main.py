@@ -1,5 +1,8 @@
 import logging
+import asyncio
+import sys
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters
+from telegram.error import Conflict
 from config import TOKEN, logger
 from db import init_db
 from handlers import start, help_command, button_handler, show_currency_rates
@@ -14,6 +17,11 @@ async def post_init(application):
         logger.info("База данных инициализирована")
     except Exception as e:
         logger.error(f"Ошибка при инициализации БД: {e}")
+
+async def shutdown(application):
+    """Корректное завершение работы бота"""
+    await application.stop()
+    await application.shutdown()
 
 def main():
     """Основная функция запуска бота"""
@@ -42,10 +50,26 @@ def main():
         setup_jobs(application)
 
         logger.info("Бот запускается...")
-        application.run_polling()
+        
+        # Запуск с обработкой конфликтов
+        application.run_polling(
+            close_loop=False,
+            stop_signals=None,  # Отключаем обработку сигналов для ручного управления
+            drop_pending_updates=True  # Игнорируем старые сообщения при запуске
+        )
+        
+    except Conflict as e:
+        logger.error(f"Конфликт: уже запущен другой экземпляр бота. {e}")
+        print("❌ ОШИБКА: Бот уже запущен в другом процессе!")
+        print("💡 Решение: Найдите и завершите старый процесс:")
+        print("   pkill -f 'python.*main.py'")
+        print("   или перезагрузите сервер")
+        sys.exit(1)
         
     except Exception as e:
         logger.error(f"Ошибка при запуске бота: {e}")
+        print(f"❌ Критическая ошибка: {e}")
+        sys.exit(1)
 
 if __name__ == '__main__':
     main()
