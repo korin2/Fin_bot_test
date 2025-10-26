@@ -91,8 +91,33 @@ def create_ai_keyboard():
 def create_alerts_keyboard():
     """Создает клавиатуру для раздела уведомлений"""
     keyboard = [
-        [KeyboardButton("🗑 Очистить все уведомления")],
         [KeyboardButton("💱 Создать уведомление")],
+        [KeyboardButton("📋 Мои уведомления")],
+        [KeyboardButton("🗑 Очистить все уведомления")],
         [KeyboardButton("🔙 Главное меню")]
+    ]
+    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+
+def create_currency_selection_keyboard():
+    """Создает клавиатуру для выбора валюты"""
+    from config import SUPPORTED_CURRENCIES
+    
+    keyboard = []
+    row = []
+    
+    for i, currency in enumerate(SUPPORTED_CURRENCIES):
+        row.append(KeyboardButton(currency))
+        if len(row) == 3 or i == len(SUPPORTED_CURRENCIES) - 1:
+            keyboard.append(row)
+            row = []
+    
+    keyboard.append([KeyboardButton("🔙 Назад к уведомлениям")])
+    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+
+def create_alert_direction_keyboard():
+    """Создает клавиатуру для выбора направления уведомления"""
+    keyboard = [
+        [KeyboardButton("📈 Выше порога"), KeyboardButton("📉 Ниже порога")],
+        [KeyboardButton("🔙 Назад к валютам")]
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
