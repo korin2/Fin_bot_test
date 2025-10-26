@@ -7,7 +7,7 @@ from services import (
     get_key_rate, format_key_rate_message, get_crypto_rates, 
     get_crypto_rates_fallback, format_crypto_rates_message, ask_deepseek
 )
-from utils import split_long_message, create_back_button, log_user_action, create_main_reply_keyboard, create_other_functions_keyboard, create_ai_keyboard, create_alerts_keyboard
+from utils import split_long_message, create_back_button, log_user_action, create_main_reply_keyboard, create_other_functions_keyboard, create_ai_keyboard, create_alerts_keyboard, create_currency_selection_keyboard, create_alert_direction_keyboard
 from db import get_user_alerts, clear_user_alerts, remove_alert, add_alert, update_user_info
 from services import get_weather_moscow, format_weather_message
 
@@ -75,7 +75,6 @@ async def stop_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         logger.error(f"Ошибка в команде /stop: {e}")
         await update.message.reply_text("❌ Произошла ошибка при завершении работы.")
 
-# Также обновите функцию help_command - добавьте /stop в справку
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Обработчик команды /help"""
     from config import ADMIN_IDS
@@ -118,1009 +117,12 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     reply_markup = create_main_reply_keyboard()
     await update.message.reply_text(help_text, parse_mode='Markdown', reply_markup=reply_markup)
 
-async def show_currency_rates(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Показывает курсы валют"""
-    try:
-        log_user_action(update.effective_user.id, "view_currency_rates")
-        
-        rates_today, date_today, rates_tomorrow, changes = get_currency_rates_with_tomorrow()
-        
-        if not rates_today:
-            await update.message.reply_text(
-                "❌ Не удалось получить курсы валют.", 
-                reply_markup=create_main_reply_keyboard()
-            )
-            return
-        
-        message = format_currency_rates_message(rates_today, date_today, rates_tomorrow, changes)
-        await update.message.reply_text(message, parse_mode='HTML', reply_markup=create_main_reply_keyboard())
-        
-    except Exception as e:
-        logger.error(f"Ошибка при показе курсов валют: {e}")
-        await update.message.reply_text("❌ Ошибка при получении данных.", reply_markup=create_main_reply_keyboard())
-
-async def show_key_rate(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Показывает ключевую ставку"""
-    try:
-        log_user_action(update.effective_user.id, "view_key_rate")
-        
-        key_rate_data = get_key_rate()
-        
-        if not key_rate_data:
-            await update.message.reply_text(
-                "❌ Не удалось получить ключевую ставку.",
-                reply_markup=create_main_reply_keyboard()
-            )
-            return
-        
-        message = format_key_rate_message(key_rate_data)
-        
-        await update.message.reply_text(message, parse_mode='HTML', reply_markup=create_main_reply_keyboard())
-        
-    except Exception as e:
-        logger.error(f"Ошибка при показе ключевой ставки: {e}")
-        await update.message.reply_text("❌ Ошибка при получении данных.", reply_markup=create_main_reply_keyboard())
-
-async def show_crypto_rates(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Показывает курсы криптовалют"""
-    try:
-        log_user_action(update.effective_user.id, "view_crypto_rates")
-        
-        # Показываем сообщение о загрузке
-        loading_message = "🔄 <b>Загружаем курсы криптовалют...</b>"
-        await update.message.reply_text(loading_message, parse_mode='HTML')
-        
-        # Получаем данные
-        crypto_rates = get_crypto_rates()
-        
-        # Если не удалось получить данные, используем fallback
-        if not crypto_rates:
-            logger.warning("Не удалось получить данные от CoinGecko, используем fallback")
-            crypto_rates = get_crypto_rates_fallback()
-        
-        if not crypto_rates:
-            error_msg = "❌ <b>Не удалось получить курсы криптовалют.</b>"
-            await update.message.reply_text(error_msg, parse_mode='HTML', reply_markup=create_main_reply_keyboard())
-            return
-        
-        message_text = format_crypto_rates_message(crypto_rates)
-        
-        # Добавляем предупреждение если используем демо-данные
-        if crypto_rates.get('source') == 'demo_fallback':
-            message_text += "\n\n⚠️ <i>Используются демонстрационные данные (CoinGecko API недоступен)</i>"
-        
-        await update.message.reply_text(message_text, parse_mode='HTML', reply_markup=create_main_reply_keyboard())
-        
-    except Exception as e:
-        logger.error(f"Ошибка при показе курсов криптовалют: {e}")
-        await update.message.reply_text("❌ Ошибка при получении данных.", reply_markup=create_main_reply_keyboard())
-
-async def show_ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Показывает интерфейс чата с ИИ"""
-    try:
-        log_user_action(update.effective_user.id, "start_ai_chat")
-        
-        if not DEEPSEEK_API_KEY:
-            error_msg = "❌ <b>Функционал ИИ временно недоступен</b>"
-            await update.message.reply_text(error_msg, parse_mode='HTML', reply_markup=create_main_reply_keyboard())
-            return
-        
-        # Активируем режим ИИ для пользователя
-        context.user_data['ai_mode'] = True
-        
-        welcome_message = (
-            "🤖 <b>УНИВЕРСАЛЬНЫЙ ИИ ПОМОЩНИК</b>\n\n"
-            "Задайте мне любой вопрос по любой теме!\n\n"
-            "🎯 <b>Основные направления:</b>\n"
-            "• 💰 Финансы и инвестиции\n"
-            "• 📊 Технологии и программирование\n"
-            "• 🎓 Образование и наука\n"
-            "• 🎨 Творчество и искусство\n"
-            "• 🏥 Здоровье и спорт\n"
-            "• 🌍 Путешествия и культура\n"
-            "• 🔧 Советы и решение проблем\n"
-            "• 💬 Общение и поддержка\n\n"
-            "Просто напишите ваш вопрос в чат!\n\n"
-            "<i>Для выхода из режима ИИ используйте кнопку 'Главное меню'</i>"
-        )
-        
-        reply_markup = create_ai_keyboard()
-        
-        await update.message.reply_text(welcome_message, parse_mode='HTML', reply_markup=reply_markup)
-            
-    except Exception as e:
-        logger.error(f"Ошибка при показе чата с ИИ: {e}")
-        await update.message.reply_text("❌ Ошибка при запуске ИИ помощника.", reply_markup=create_main_reply_keyboard())
-
-async def show_other_functions(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Показывает меню прочих функций"""
-    try:
-        log_user_action(update.effective_user.id, "view_other_functions")
-        
-        message = (
-            "🔧 <b>ДОПОЛНИТЕЛЬНЫЕ ФУНКЦИИ</b>\n\n"
-            "Выберите дополнительную функцию:\n\n"
-            
-            "🌤️ <b>Погода:</b>\n"
-            "• Текущая погода в Москве\n"
-            "• Ежедневная рассылка погоды\n"
-            "• Рекомендации по одежде\n\n"
-            
-            "📊 <b>Аналитика:</b>\n"
-            "• Статистика использования бота\n"
-            "• Графики изменения курсов\n"
-            "• Исторические данные\n\n"
-            
-            "⚙️ <b>Настройки:</b>\n"
-            "• Настройка уведомлений\n"
-            "• Выбор языка\n"
-            "• Часовой пояс\n\n"
-            
-            "🔍 <b>Дополнительно:</b>\n"
-            "• Информация о боте\n"
-            "• Связь с разработчиком\n"
-            "• Отзывы и предложения\n\n"
-            
-            "💡 <i>Новые функции добавляются регулярно!</i>"
-        )
-        
-        reply_markup = create_other_functions_keyboard()
-        
-        await update.message.reply_text(message, parse_mode='HTML', reply_markup=reply_markup)
-            
-    except Exception as e:
-        logger.error(f"Ошибка при показе прочих функций: {e}")
-        await update.message.reply_text("❌ Ошибка при загрузке функций.", reply_markup=create_main_reply_keyboard())
-
-async def show_bot_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Показывает статистику бота"""
-    try:
-        log_user_action(update.effective_user.id, "view_bot_stats")
-        
-        from db import get_all_users, get_all_alerts
-        
-        users = await get_all_users()
-        alerts = await get_all_alerts()
-        
-        total_users = len(users)
-        total_alerts = len(alerts)
-        active_alerts = len([alert for alert in alerts if alert.get('is_active', True)])
-        
-        message = (
-            "📊 <b>СТАТИСТИКА БОТА</b>\n\n"
-            f"👥 <b>Всего пользователей:</b> {total_users}\n"
-            f"🔔 <b>Всего уведомлений:</b> {total_alerts}\n"
-            f"🟢 <b>Активных уведомлений:</b> {active_alerts}\n"
-            f"🔴 <b>Выполненных уведомлений:</b> {total_alerts - active_alerts}\n\n"
-            
-            "📈 <b>Популярные валюты для уведомлений:</b>\n"
-        )
-        
-        # Анализируем популярные валюты
-        currency_stats = {}
-        for alert in alerts:
-            currency = alert['from_currency']
-            currency_stats[currency] = currency_stats.get(currency, 0) + 1
-        
-        if currency_stats:
-            sorted_currencies = sorted(currency_stats.items(), key=lambda x: x[1], reverse=True)
-            for currency, count in sorted_currencies[:5]:  # Топ-5 валют
-                message += f"   • {currency}: {count} уведомлений\n"
-        else:
-            message += "   <i>Нет данных</i>\n"
-        
-        message += "\n💡 <i>Статистика обновляется в реальном времени</i>"
-        
-        await update.message.reply_text(message, parse_mode='HTML', reply_markup=create_other_functions_keyboard())
-        
-    except Exception as e:
-        logger.error(f"Ошибка при показе статистики: {e}")
-        await update.message.reply_text(
-            "❌ Ошибка при загрузке статистики.",
-            reply_markup=create_other_functions_keyboard()
-        )
-
-async def show_bot_about(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Показывает информацию о боте"""
-    try:
-        log_user_action(update.effective_user.id, "view_bot_about")
-        
-        message = (
-            "ℹ️ <b>ИНФОРМАЦИЯ О БОТЕ</b>\n\n"
-            
-            "🤖 <b>Финансовый бот с ИИ помощником</b>\n\n"
-            
-            "📚 <b>Основные возможности:</b>\n"
-            "• 💱 Курсы валют ЦБ РФ с прогнозом\n"
-            "• ₿ Криптовалюты через CoinGecko API\n"
-            "• 💎 Ключевая ставка ЦБ РФ\n"
-            "• 🤖 Универсальный ИИ помощник\n"
-            "• 🔔 Умные уведомления\n"
-            "• 🌅 Ежедневная рассылка\n\n"
-            
-            "🛠 <b>Технологии:</b>\n"
-            "• Python 3.8+\n"
-            "• PostgreSQL\n"
-            "• python-telegram-bot\n"
-            "• DeepSeek AI API\n"
-            "• CoinGecko API\n"
-            "• ЦБ РФ API\n\n"
-            
-            "📞 <b>Поддержка:</b>\n"
-            "• Для связи с разработчиком и сообщения об ошибках: korin2008@ya.ru\n"
-            "Собрал данного бота Санёк\n\n"
-            
-            "💡 <b>Версия:</b> 1.0.9\n"
-            "🔄 <b>Последнее обновление:</b> Октябрь 2024\n\n"
-            
-            "⭐ <i>Бот постоянно развивается и улучшается!</i>"
-        )
-        
-        await update.message.reply_text(message, parse_mode='HTML', reply_markup=create_other_functions_keyboard())
-        
-    except Exception as e:
-        logger.error(f"Ошибка при показе информации о боте: {e}")
-        await update.message.reply_text(
-            "❌ Ошибка при загрузке информации.",
-            reply_markup=create_other_functions_keyboard()
-        )
-
-async def show_settings(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Показывает настройки"""
-    try:
-        log_user_action(update.effective_user.id, "view_settings")
-        
-        message = (
-            "⚙️ <b>НАСТРОЙКИ</b>\n\n"
-            
-            "🔔 <b>Уведомления:</b>\n"
-            "• Ежедневная рассылка: <b>Включено</b>\n"
-            "• Погода: <b>Включено</b>\n"
-            "• Курсы валют: <b>Включено</b>\n"
-            "• Проверка уведомлений: <b>Каждые 30 минут</b>\n\n"
-            
-            "🌤️ <b>Погода:</b>\n"
-            "• Город: <b>Москва</b>\n"
-            "• Ежедневная рассылка: <b>08:00</b>\n"
-            "• Единицы измерения: <b>°C, м/с</b>\n\n"
-            
-            "🌍 <b>Региональные настройки:</b>\n"
-            "• Часовой пояс: <b>Москва (UTC+3)</b>\n"
-            "• Язык: <b>Русский</b>\n\n"
-            
-            "📊 <b>Отображение:</b>\n"
-            "• Формат чисел: <b>С разделителями</b>\n"
-            "• Валюта по умолчанию: <b>RUB</b>\n\n"
-            
-            "💡 <i>Настройки будут доступны для изменения в будущих обновлениях</i>"
-        )
-        
-        await update.message.reply_text(message, parse_mode='HTML', reply_markup=create_other_functions_keyboard())
-        
-    except Exception as e:
-        logger.error(f"Ошибка при показе настроек: {e}")
-        await update.message.reply_text(
-            "❌ Ошибка при загрузке настроек.",
-            reply_markup=create_other_functions_keyboard()
-        )
-
-async def handle_ai_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Обрабатывает текстовые сообщения для ИИ"""
-    try:
-        user_id = update.effective_user.id
-        user_message = update.message.text
-        
-        # Проверяем, не является ли сообщение командой
-        if user_message.startswith('/'):
-            return
-            
-        # Проверяем, активирован ли режим ИИ для пользователя
-        if context.user_data.get('ai_mode') != True:
-            return
-            
-        # Логируем запрос к ИИ
-        log_user_action(user_id, "ai_request", {"message_length": len(user_message)})
-        
-        # Показываем индикатор набора сообщения
-        await update.message.chat.send_action(action="typing")
-        
-        # Отправляем запрос к DeepSeek
-        ai_response = await ask_deepseek(user_message, context)
-        
-        # Разбиваем длинные сообщения на части
-        message_parts = await split_long_message(ai_response)
-        
-        # Отправляем первую часть с клавиатурой
-        first_part = message_parts[0]
-        if len(message_parts) > 1:
-            first_part += f"\n\n📄 <i>Часть 1 из {len(message_parts)}</i>"
-        
-        keyboard = [
-            [KeyboardButton("🔄 Новый вопрос")],
-            [KeyboardButton("🔙 Главное меню")]
-        ]
-        reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-        
-        await update.message.reply_text(
-            f"🤖 <b>ИИ Ассистент:</b>\n\n{first_part}",
-            parse_mode='HTML',
-            reply_markup=reply_markup
-        )
-        
-        # Отправляем остальные части
-        for i, part in enumerate(message_parts[1:], 2):
-            part_text = part
-            if i < len(message_parts):
-                part_text += f"\n\n📄 <i>Часть {i} из {len(message_parts)}</i>"
-            
-            await update.message.reply_text(
-                part_text,
-                parse_mode='HTML'
-            )
-        
-    except Exception as e:
-        logger.error(f"Ошибка в обработчике ИИ сообщений: {e}")
-        await update.message.reply_text(
-            "❌ Произошла ошибка при обработке вашего запроса.",
-            reply_markup=create_main_reply_keyboard()
-        )
-
-async def alert_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Создание уведомления о курсе валюты"""
-    try:
-        log_user_action(update.effective_user.id, "create_alert", {"args": context.args})
-        
-        args = context.args
-        
-        if len(args) != 4:
-            await update.message.reply_text(
-                "📝 <b>Использование:</b> /alert &lt;из&gt; &lt;в&gt; &lt;порог&gt; &lt;above|below&gt;\n\n"
-                "💡 <b>Примеры:</b>\n"
-                "• <code>/alert USD RUB 80 above</code> - уведомить когда USD выше 80 руб.\n"
-                "• <code>/alert EUR RUB 90 below</code> - уведомить когда EUR ниже 90 руб.\n"
-                "• <code>/alert AED RUB 22 above</code> - уведомить когда AED выше 22 руб.",
-                parse_mode='HTML',
-                reply_markup=create_main_reply_keyboard()
-            )
-            return
-        
-        from_curr, to_curr = args[0].upper(), args[1].upper()
-        
-        # Проверяем поддерживаемые валюты (добавлен AED)
-        supported_currencies = ['USD', 'EUR', 'GBP', 'JPY', 'CNY', 'CHF', 'CAD', 'AUD', 'TRY', 'KZT', 'AED']
-        if from_curr not in supported_currencies:
-            await update.message.reply_text(
-                f"❌ Валюта <b>{from_curr}</b> не поддерживается.\n\n"
-                f"💱 <b>Доступные валюты:</b> {', '.join(supported_currencies)}",
-                parse_mode='HTML',
-                reply_markup=create_main_reply_keyboard()
-            )
-            return
-        
-        # Проверяем, что целевая валюта - RUB
-        if to_curr != 'RUB':
-            await update.message.reply_text(
-                "❌ В настоящее время поддерживаются только уведомления для пар с RUB.\n"
-                "💡 Используйте: <code>/alert USD RUB 80 above</code>",
-                parse_mode='HTML',
-                reply_markup=create_main_reply_keyboard()
-            )
-            return
-        
-        try:
-            threshold = float(args[2])
-            if threshold <= 0:
-                raise ValueError("Порог должен быть положительным числом")
-        except ValueError:
-            await update.message.reply_text(
-                "❌ Порог должен быть положительным числом.",
-                reply_markup=create_main_reply_keyboard()
-            )
-            return
-        
-        direction = args[3].lower()
-        if direction not in ['above', 'below']:
-            await update.message.reply_text(
-                "❌ Направление должно быть 'above' или 'below'.",
-                reply_markup=create_main_reply_keyboard()
-            )
-            return
-        
-        user_id = update.effective_message.from_user.id
-        
-        # Добавляем уведомление
-        await add_alert(user_id, from_curr, to_curr, threshold, direction)
-        
-        # Получаем текущий курс для информации
-        rates_today, _, _, _ = get_currency_rates_with_tomorrow()
-        current_rate = "N/A"
-        if rates_today and from_curr in rates_today:
-            current_rate = f"{rates_today[from_curr]['value']:.2f}"
-        
-        success_message = (
-            f"✅ <b>УВЕДОМЛЕНИЕ УСТАНОВЛЕНО!</b>\n\n"
-            f"💱 <b>Пара:</b> {from_curr}/{to_curr}\n"
-            f"🎯 <b>Порог:</b> {threshold} руб.\n"
-            f"📊 <b>Условие:</b> курс <b>{'выше' if direction == 'above' else 'ниже'}</b> {threshold} руб.\n"
-            f"💹 <b>Текущий курс:</b> {current_rate} руб.\n\n"
-            f"💡 Уведомление будет проверяться каждые 30 минут\n"
-            f"🔔 При срабатывании вы получите сообщение"
-        )
-        
-        await update.message.reply_text(
-            success_message,
-            parse_mode='HTML',
-            reply_markup=create_main_reply_keyboard()
-        )
-        
-    except Exception as e:
-        logger.error(f"Ошибка в команде /alert: {e}")
-        await update.message.reply_text(
-            f"❌ Произошла ошибка при установке уведомления:\n<code>{str(e)}</code>",
-            parse_mode='HTML',
-            reply_markup=create_main_reply_keyboard()
-        )
-
-async def myalerts_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Показывает активные уведомления пользователя"""
-    try:
-        user_id = update.effective_user.id
-        log_user_action(user_id, "view_my_alerts")
-        
-        alerts = await get_user_alerts(user_id)
-        
-        if not alerts:
-            message = (
-                "📭 <b>У вас нет активных уведомлений.</b>\n\n"
-                "💡 Нажмите <b>💱 Создать уведомление</b> чтобы добавить первое уведомление!"
-            )
-            
-            await update.message.reply_text(message, parse_mode='HTML', reply_markup=create_alerts_keyboard())
-            return
-        
-        message = "🔔 <b>ВАШИ АКТИВНЫЕ УВЕДОМЛЕНИЯ</b>\n\n"
-        
-        for i, alert in enumerate(alerts, 1):
-            from_curr = alert['from_currency']
-            to_curr = alert['to_currency']
-            threshold = alert['threshold']
-            direction = alert['direction']
-            
-            # Получаем текущий курс для сравнения
-            rates_today, _, _, _ = get_currency_rates_with_tomorrow()
-            current_rate = "N/A"
-            if rates_today and from_curr in rates_today:
-                current_rate = f"{rates_today[from_curr]['value']:.2f}"
-            
-            direction_display = 'выше' if direction == 'above' else 'ниже'
-            status_icon = "🟢" if alert.get('is_active', True) else "🔴"
-            
-            message += (
-                f"{status_icon} <b>{i}. {from_curr} → {to_curr}</b>\n"
-                f"   🎯 Порог: <b>{threshold} руб.</b>\n"
-                f"   📊 Условие: курс <b>{direction_display}</b> {threshold} руб.\n"
-                f"   💱 Текущий курс: <b>{current_rate} руб.</b>\n\n"
-            )
-        
-        message += (
-            "⏰ <i>Уведомления проверяются каждые 30 минут автоматически</i>\n"
-            "💡 <i>При срабатывании уведомление автоматически удаляется</i>"
-        )
-        
-        reply_markup = create_alerts_keyboard()
-        
-        await update.message.reply_text(message, parse_mode='HTML', reply_markup=reply_markup)
-        
-    except Exception as e:
-        logger.error(f"Ошибка в команде /myalerts: {e}")
-        error_message = "❌ <b>Ошибка при получении уведомлений.</b>"
-        await update.message.reply_text(error_message, parse_mode='HTML', reply_markup=create_alerts_keyboard())
-
-async def show_weather(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Показывает текущую погоду в Москве"""
-    try:
-        log_user_action(update.effective_user.id, "view_weather")
-        
-        # Показываем сообщение о загрузке
-        loading_message = "🔄 <b>Загружаем данные о погоде...</b>"
-        await update.message.reply_text(loading_message, parse_mode='HTML')
-        
-        # Получаем данные о погоде
-        weather_data = get_weather_moscow()
-        message = format_weather_message(weather_data)
-        
-        await update.message.reply_text(message, parse_mode='HTML', reply_markup=create_main_reply_keyboard())
-        
-    except Exception as e:
-        logger.error(f"Ошибка при показе погоды: {e}")
-        await update.message.reply_text(
-            "❌ Ошибка при получении данных о погоде.",
-            reply_markup=create_main_reply_keyboard()
-        )
-
-async def handle_text_messages(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Обработчик текстовых сообщений для reply-меню"""
-    try:
-        user_message = update.message.text
-        user_id = update.effective_user.id
-        
-        # Логируем текстовое сообщение
-        log_user_action(user_id, "text_message", {"message": user_message})
-        
-        # Обработка меню уведомлений
-        if user_message == "🔔 Уведомления":
-            await show_alerts_menu(update, context)
-        elif user_message == "💱 Создать уведомление":
-            await start_create_alert(update, context)
-        elif user_message == "📋 Мои уведомления":
-            await myalerts_command(update, context)
-        elif user_message == "🗑 Очистить все уведомления":
-            user_id = update.effective_user.id
-            await clear_user_alerts(user_id)
-            await update.message.reply_text(
-                "✅ Все уведомления очищены",
-                reply_markup=create_alerts_keyboard()
-            )
-        
-        # Обработка процесса создания уведомления
-        elif context.user_data.get('creating_alert'):
-            alert_stage = context.user_data.get('alert_stage')
-            
-            if alert_stage == 'select_currency':
-                await handle_currency_selection(update, context)
-            elif alert_stage == 'select_direction':
-                await handle_direction_selection(update, context)
-            elif alert_stage == 'enter_threshold':
-                await handle_threshold_input(update, context)
-        
-        # Обработка навигации назад
-        elif any(back_text in user_message for back_text in [
-            "🔙 Назад к уведомлениям", 
-            "🔙 Назад к валютам", 
-            "🔙 Назад к условиям"
-        ]):
-            await handle_alerts_back_navigation(update, context)
-        
-        if user_message == "💱 Курсы валют":
-            await show_currency_rates(update, context)
-        elif user_message == "₿ Криптовалюты":
-            await show_crypto_rates(update, context)
-        elif user_message == "💎 Ключевая ставка":
-            await show_key_rate(update, context)
-        elif user_message == "🤖 ИИ помощник":
-            await show_ai_chat(update, context)
-        elif user_message == "🔔 Мои уведомления":
-            await myalerts_command(update, context)
-        elif user_message == "🌤️ Погода":
-            await show_weather(update, context)
-        elif user_message == "🔧 Другие функции":
-            await show_other_functions(update, context)
-        elif user_message == "❓ Помощь":
-            await help_command(update, context)
-        elif user_message == "📊 Статистика":
-            await show_bot_stats(update, context)
-        elif user_message == "⚙️ Настройки":
-            await show_settings(update, context)
-        elif user_message == "ℹ️ О боте":
-            await show_bot_about(update, context)
-        elif user_message == "🔙 Главное меню":
-            context.user_data['ai_mode'] = False
-            await start(update, context)
-        elif user_message == "💡 Примеры вопросов":
-            examples_text = (
-                "💡 <b>ПРИМЕРЫ ВОПРОСОВ ДЛЯ ИИ:</b>\n\n"
-                "💰 <b>Финансы:</b>\n"
-                "• Как начать инвестировать с маленькой суммой?\n"
-                "• Каков прогноз курса доллара на месяц?\n"
-                "• В чем разница между акциями и облигациями?\n\n"
-                "📊 <b>Технологии:</b>\n"
-                "• Объясни что такое блокчейн простыми словами\n"
-                "• Как создать телеграм бота на Python?\n"
-                "• Какие языки программирования учить в 2024?\n\n"
-                "🎓 <b>Образование:</b>\n"
-                "• Как эффективно учиться новому?\n"
-                "• Объясни теорию относительности Эйнштейна\n"
-                "• Какие навыки будут востребованы в будущем?\n\n"
-                "🎨 <b>Творчество:</b>\n"
-                "• Придумай идею для стартапа в IT\n"
-                "• Напиши короткое стихотворение о технологии\n"
-                "• Какие тренды в дизайне сейчас популярны?\n\n"
-                "🏥 <b>Здоровье:</b>\n"
-                "• Как поддерживать здоровый образ жизни?\n"
-                "• Какие упражнения делать при сидячей работе?\n"
-                "• Как бороться со стрессом на работе?\n\n"
-                "🌍 <b>Путешествия:</b>\n"
-                "• Куда поехать отдыхать с ограниченным бюджетом?\n"
-                "• Какие документы нужны для поездки в Европу?\n"
-                "• Как путешествовать экологично?\n\n"
-                "💬 <b>Просто поговорить:</b>\n"
-                "• Расскажи интересный факт о космосе\n"
-                "• Что думаешь об искусственном интеллекте?\n"
-                "• Давай обсудим будущее технологий"
-            )
-            await update.message.reply_text(
-                examples_text,
-                parse_mode='HTML',
-                reply_markup=create_main_reply_keyboard()
-            )
-        elif user_message == "🔄 Новый вопрос":
-            await show_ai_chat(update, context)
-        elif user_message == "🗑 Очистить все уведомления":
-            user_id = update.effective_user.id
-            await clear_user_alerts(user_id)
-            await update.message.reply_text(
-                "✅ Все уведомления очищены",
-                reply_markup=create_main_reply_keyboard()
-            )
-        elif user_message == "💱 Создать уведомление":
-            await update.message.reply_text(
-                "📝 <b>Создание уведомления</b>\n\n"
-                "Используйте команду:\n"
-                "<code>/alert USD RUB 80 above</code>\n\n"
-                "💡 <b>Примеры:</b>\n"
-                "• <code>/alert USD RUB 85 above</code> - уведомит когда USD выше 85 руб.\n"
-                "• <code>/alert EUR RUB 90 below</code> - уведомит когда EUR ниже 90 руб.",
-                parse_mode='HTML',
-                reply_markup=create_main_reply_keyboard()
-            )
-        else:
-            # Если сообщение не распознано как команда меню, пробуем обработать как запрос к ИИ
-            if context.user_data.get('ai_mode') == True:
-                await handle_ai_message(update, context)
-            else:
-                # Если не режим ИИ и не команда меню, показываем подсказку
-                await update.message.reply_text(
-                    "🤔 <b>Не понял вашу команду</b>\n\n"
-                    "Используйте кнопки меню ниже или команды:\n"
-                    "/start - Главное меню\n"
-                    "/help - Справка по командам",
-                    parse_mode='HTML',
-                    reply_markup=create_main_reply_keyboard()
-                )
-                
-    except Exception as e:
-        logger.error(f"Ошибка в обработчике текстовых сообщений: {e}")
-        await update.message.reply_text(
-            "❌ Произошла ошибка при обработке сообщения.",
-            reply_markup=create_main_reply_keyboard()
-        )
-
-
-
-# Обработчики callback-кнопок (оставлены для обратной совместимости)
-async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Обработчик нажатий на inline-кнопки"""
-    try:
-        query = update.callback_query
-        await query.answer()
-        
-        data = query.data
-        
-        if data == 'help':
-            await help_command(update, context)
-        elif data == 'back_to_main':
-            context.user_data['ai_mode'] = False
-            await start(update, context)
-        elif data == 'currency_rates':
-            await show_currency_rates(update, context)
-        elif data == 'crypto_rates':
-            await show_crypto_rates(update, context)
-        elif data == 'key_rate':
-            await show_key_rate(update, context)
-        elif data == 'ai_chat':
-            await show_ai_chat(update, context)
-        elif data == 'my_alerts':
-            await myalerts_command(update, context)
-        elif data == 'other_functions':
-            await show_other_functions(update, context)
-        elif data == 'weather':
-            await show_weather(update, context)
-        elif data == 'stats':
-            await show_bot_stats(update, context)
-        elif data == 'about':
-            await show_bot_about(update, context)
-        elif data == 'settings':
-            await show_settings(update, context)
-        elif data == 'clear_all_alerts':
-            user_id = update.effective_user.id
-            await clear_user_alerts(user_id)
-            await query.edit_message_text(
-                "✅ Все уведомления очищены",
-                reply_markup=create_main_reply_keyboard()
-            )
-        elif data == 'create_alert':
-            await query.edit_message_text(
-                "📝 <b>Создание уведомления</b>\n\n"
-                "Используйте команду:\n"
-                "<code>/alert USD RUB 80 above</code>\n\n"
-                "💡 <b>Примеры:</b>\n"
-                "• <code>/alert USD RUB 85 above</code> - уведомит когда USD выше 85 руб.\n"
-                "• <code>/alert EUR RUB 90 below</code> - уведомит когда EUR ниже 90 руб.",
-                parse_mode='HTML',
-                reply_markup=create_main_reply_keyboard()
-            )
-        else:
-            await query.edit_message_text(
-                "🔄 <b>Функция в разработке</b>",
-                parse_mode='HTML',
-                reply_markup=create_main_reply_keyboard()
-            )
-
-    except Exception as e:
-        logger.error(f"Ошибка в обработчике кнопок: {e}")
-
-# команда проверки статуса
-async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Показывает статус бота и системную информацию"""
-    try:
-        import psutil
-        import platform
-        from datetime import datetime
-        
-        # Системная информация
-        system_info = f"🖥️ <b>Системная информация</b>\n"
-        system_info += f"• OS: {platform.system()} {platform.release()}\n"
-        system_info += f"• Python: {platform.python_version()}\n"
-        system_info += f"• CPU: {psutil.cpu_percent()}%\n"
-        system_info += f"• Memory: {psutil.virtual_memory().percent}%\n"
-        system_info += f"• Disk: {psutil.disk_usage('/').percent}%\n\n"
-        
-        # Информация о боте
-        bot_info = f"🤖 <b>Информация о боте</b>\n"
-        bot_info += f"• Версия: 1.0.0\n"
-        bot_info += f"• Запущен: {datetime.now().strftime('%d.%m.%Y %H:%M')}\n"
-        bot_info += f"• Пользователей: {len(await get_all_users())}\n"
-        bot_info += f"• Уведомлений: {len(await get_all_alerts())}\n\n"
-        
-        # Статус сервисов
-        services_info = f"🔧 <b>Статус сервисов</b>\n"
-        
-        # Проверка ЦБ РФ
-        try:
-            rates, _ = get_currency_rates_for_date(datetime.now().strftime('%d/%m/%Y'))
-            services_info += "• ЦБ РФ: ✅ Работает\n"
-        except:
-            services_info += "• ЦБ РФ: ❌ Ошибка\n"
-            
-        # Проверка CoinGecko
-        try:
-            crypto_data = get_crypto_rates()
-            services_info += "• CoinGecko: ✅ Работает\n" if crypto_data else "• CoinGecko: ❌ Ошибка\n"
-        except:
-            services_info += "• CoinGecko: ❌ Ошибка\n"
-            
-        # Проверка DeepSeek
-        services_info += f"• DeepSeek AI: {'✅ Доступен' if DEEPSEEK_API_KEY else '❌ Не настроен'}\n"
-        
-        # Проверка погоды
-        services_info += f"• Погода: {'✅ Настроена' if WEATHER_API_KEY else '⚠️ Демо-данные'}\n"
-        
-        full_message = system_info + bot_info + services_info
-        full_message += f"\n💡 <i>Бот работает стабильно</i>"
-        
-        await update.message.reply_text(full_message, parse_mode='HTML', reply_markup=create_main_reply_keyboard())
-        
-    except Exception as e:
-        logger.error(f"Ошибка в команде status: {e}")
-        await update.message.reply_text(
-            "❌ Ошибка при получении статуса системы",
-            reply_markup=create_main_reply_keyboard()
-        )
-
-async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Показывает статус бота и системную информацию"""
-    try:
-        import psutil
-        import platform
-        from datetime import datetime
-        
-        # Системная информация
-        system_info = f"🖥️ <b>Системная информация</b>\n"
-        system_info += f"• OS: {platform.system()} {platform.release()}\n"
-        system_info += f"• Python: {platform.python_version()}\n"
-        system_info += f"• CPU: {psutil.cpu_percent()}%\n"
-        system_info += f"• Memory: {psutil.virtual_memory().percent}%\n"
-        system_info += f"• Disk: {psutil.disk_usage('/').percent}%\n\n"
-        
-        # Информация о боте
-        from db import get_all_users, get_all_alerts
-        users = await get_all_users()
-        alerts = await get_all_alerts()
-        
-        bot_info = f"🤖 <b>Информация о боте</b>\n"
-        bot_info += f"• Версия: 1.0.0\n"
-        bot_info += f"• Запущен: {datetime.now().strftime('%d.%m.%Y %H:%M')}\n"
-        bot_info += f"• Пользователей: {len(users)}\n"
-        bot_info += f"• Уведомлений: {len(alerts)}\n\n"
-        
-        # Статус сервисов
-        services_info = f"🔧 <b>Статус сервисов</b>\n"
-        
-        # Проверка ЦБ РФ
-        try:
-            from services import get_currency_rates_for_date
-            rates, _ = get_currency_rates_for_date(datetime.now().strftime('%d/%m/%Y'))
-            services_info += "• ЦБ РФ: ✅ Работает\n"
-        except:
-            services_info += "• ЦБ РФ: ❌ Ошибка\n"
-            
-        # Проверка CoinGecko
-        try:
-            from services import get_crypto_rates
-            crypto_data = get_crypto_rates()
-            services_info += "• CoinGecko: ✅ Работает\n" if crypto_data else "• CoinGecko: ❌ Ошибка\n"
-        except:
-            services_info += "• CoinGecko: ❌ Ошибка\n"
-            
-        # Проверка DeepSeek
-        from config import DEEPSEEK_API_KEY
-        services_info += f"• DeepSeek AI: {'✅ Доступен' if DEEPSEEK_API_KEY else '❌ Не настроен'}\n"
-        
-        # Проверка погоды
-        from config import WEATHER_API_KEY
-        services_info += f"• Погода: {'✅ Настроена' if WEATHER_API_KEY and WEATHER_API_KEY != 'demo_key_12345' else '⚠️ Демо-данные'}\n"
-        
-        full_message = system_info + bot_info + services_info
-        full_message += f"\n💡 <i>Бот работает стабильно</i>"
-        
-        await update.message.reply_text(full_message, parse_mode='HTML', reply_markup=create_main_reply_keyboard())
-        
-    except Exception as e:
-        logger.error(f"Ошибка в команде status: {e}")
-        await update.message.reply_text(
-            "❌ Ошибка при получении статуса системы",
-            reply_markup=create_main_reply_keyboard()
-        )
-
-async def logs_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Показывает последние логи (только для администраторов)"""
-    try:
-        from config import ADMIN_IDS
-        
-        if not ADMIN_IDS:
-            await update.message.reply_text("❌ Администраторы не настроены")
-            return
-            
-        if update.effective_user.id not in ADMIN_IDS:
-            await update.message.reply_text("❌ Эта команда только для администраторов")
-            return
-            
-        # Чтение последних логов
-        try:
-            with open('bot.log', 'r', encoding='utf-8') as f:
-                lines = f.readlines()
-                last_lines = lines[-20:]  # Последние 20 строк
-                log_text = ''.join(last_lines)
-        except FileNotFoundError:
-            log_text = "Файл логов не найден"
-        
-        if len(log_text) > 4000:
-            log_text = log_text[-4000:]  # Обрезаем если слишком длинный
-            
-        await update.message.reply_text(
-            f"📋 <b>Последние логи:</b>\n<code>{log_text}</code>",
-            parse_mode='HTML',
-            reply_markup=create_main_reply_keyboard()
-        )
-        
-    except Exception as e:
-        logger.error(f"Ошибка в команде logs: {e}")
-        await update.message.reply_text(
-            "❌ Ошибка при чтении логов",
-            reply_markup=create_main_reply_keyboard()
-        )
-
-async def clear_logs_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Очищает логи (только для администраторов)"""
-    try:
-        from config import ADMIN_IDS
-        
-        if not ADMIN_IDS:
-            await update.message.reply_text("❌ Администраторы не настроены")
-            return
-            
-        if update.effective_user.id not in ADMIN_IDS:
-            await update.message.reply_text("❌ Эта команда только для администраторов")
-            return
-            
-        # Очистка файла логов
-        open('bot.log', 'w').close()
-        
-        await update.message.reply_text(
-            "✅ Логи успешно очищены",
-            reply_markup=create_main_reply_keyboard()
-        )
-        
-    except Exception as e:
-        logger.error(f"Ошибка в команде clear_logs: {e}")
-        await update.message.reply_text(
-            "❌ Ошибка при очистке логов",
-            reply_markup=create_main_reply_keyboard()
-        )
-
-async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Показывает статус бота и системную информацию"""
-    try:
-        import psutil
-        import platform
-        from datetime import datetime
-        from config import ADMIN_IDS
-        
-        # Системная информация
-        system_info = f"🖥️ <b>Системная информация</b>\n"
-        system_info += f"• OS: {platform.system()} {platform.release()}\n"
-        system_info += f"• Python: {platform.python_version()}\n"
-        system_info += f"• CPU: {psutil.cpu_percent()}%\n"
-        system_info += f"• Memory: {psutil.virtual_memory().percent}%\n"
-        system_info += f"• Disk: {psutil.disk_usage('/').percent}%\n\n"
-        
-        # Информация о боте
-        from db import get_all_users, get_all_alerts
-        users = await get_all_users()
-        alerts = await get_all_alerts()
-        
-        bot_info = f"🤖 <b>Информация о боте</b>\n"
-        bot_info += f"• Версия: 1.0.0\n"
-        bot_info += f"• Запущен: {datetime.now().strftime('%d.%m.%Y %H:%M')}\n"
-        bot_info += f"• Пользователей: {len(users)}\n"
-        bot_info += f"• Уведомлений: {len(alerts)}\n"
-        bot_info += f"• Администраторов: {len(ADMIN_IDS)}\n\n"
-        
-        # Статус сервисов
-        services_info = f"🔧 <b>Статус сервисов</b>\n"
-        
-        # Проверка ЦБ РФ
-        try:
-            from services import get_currency_rates_for_date
-            rates, _ = get_currency_rates_for_date(datetime.now().strftime('%d/%m/%Y'))
-            services_info += "• ЦБ РФ: ✅ Работает\n"
-        except:
-            services_info += "• ЦБ РФ: ❌ Ошибка\n"
-            
-        # Проверка CoinGecko
-        try:
-            from services import get_crypto_rates
-            crypto_data = get_crypto_rates()
-            services_info += "• CoinGecko: ✅ Работает\n" if crypto_data else "• CoinGecko: ❌ Ошибка\n"
-        except:
-            services_info += "• CoinGecko: ❌ Ошибка\n"
-            
-        # Проверка DeepSeek
-        from config import DEEPSEEK_API_KEY
-        services_info += f"• DeepSeek AI: {'✅ Доступен' if DEEPSEEK_API_KEY else '❌ Не настроен'}\n"
-        
-        # Проверка погоды
-        from config import WEATHER_API_KEY
-        services_info += f"• Погода: {'✅ Настроена' if WEATHER_API_KEY and WEATHER_API_KEY != 'demo_key_12345' else '⚠️ Демо-данные'}\n"
-        
-        full_message = system_info + bot_info + services_info
-        full_message += f"\n💡 <i>Бот работает стабильно</i>"
-        
-        await update.message.reply_text(full_message, parse_mode='HTML', reply_markup=create_main_reply_keyboard())
-        
-    except Exception as e:
-        logger.error(f"Ошибка в команде status: {e}")
-        await update.message.reply_text(
-            "❌ Ошибка при получении статуса системы",
-            reply_markup=create_main_reply_keyboard()
-        )
-
-# команда для получения ID
-async def myid_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Показывает ID пользователя"""
-    user = update.effective_user
-    await update.message.reply_text(
-        f"🆔 Ваш ID: <code>{user.id}</code>\n"
-        f"👤 Имя: {user.first_name or 'Не указано'}\n"
-        f"📛 Username: @{user.username or 'Не указан'}",
-        parse_mode='HTML',
-        reply_markup=create_main_reply_keyboard()
-    )
-
+# Функции уведомлений
 async def show_alerts_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Показывает меню уведомлений"""
     try:
-        log_user_action(update.effective_user.id, "view_alerts_menu")
+        user_id = update.effective_user.id
+        log_user_action(user_id, "view_alerts_menu")
         
         message = (
             "🔔 <b>УПРАВЛЕНИЕ УВЕДОМЛЕНИЯМИ</b>\n\n"
@@ -1133,6 +135,8 @@ async def show_alerts_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         )
         
         reply_markup = create_alerts_keyboard()
+        logger.info(f"Отправка меню уведомлений пользователю {user_id}")
+        
         await update.message.reply_text(message, parse_mode='HTML', reply_markup=reply_markup)
             
     except Exception as e:
@@ -1142,7 +146,8 @@ async def show_alerts_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 async def start_create_alert(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Начинает процесс создания уведомления - выбор валюты"""
     try:
-        log_user_action(update.effective_user.id, "start_create_alert")
+        user_id = update.effective_user.id
+        log_user_action(user_id, "start_create_alert")
         
         # Сохраняем состояние создания уведомления
         context.user_data['creating_alert'] = True
@@ -1155,6 +160,8 @@ async def start_create_alert(update: Update, context: ContextTypes.DEFAULT_TYPE)
         )
         
         reply_markup = create_currency_selection_keyboard()
+        logger.info(f"Начало создания уведомления для пользователя {user_id}")
+        
         await update.message.reply_text(message, parse_mode='HTML', reply_markup=reply_markup)
             
     except Exception as e:
@@ -1352,3 +359,902 @@ async def handle_alerts_back_navigation(update: Update, context: ContextTypes.DE
     except Exception as e:
         logger.error(f"Ошибка при навигации назад: {e}")
         await update.message.reply_text("❌ Ошибка навигации.", reply_markup=create_alerts_keyboard())
+
+# Основные функции бота
+async def show_currency_rates(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Показывает курсы валют"""
+    try:
+        log_user_action(update.effective_user.id, "view_currency_rates")
+        
+        rates_today, date_today, rates_tomorrow, changes = get_currency_rates_with_tomorrow()
+        
+        if not rates_today:
+            await update.message.reply_text(
+                "❌ Не удалось получить курсы валют.", 
+                reply_markup=create_main_reply_keyboard()
+            )
+            return
+        
+        message = format_currency_rates_message(rates_today, date_today, rates_tomorrow, changes)
+        await update.message.reply_text(message, parse_mode='HTML', reply_markup=create_main_reply_keyboard())
+        
+    except Exception as e:
+        logger.error(f"Ошибка при показе курсов валют: {e}")
+        await update.message.reply_text("❌ Ошибка при получении данных.", reply_markup=create_main_reply_keyboard())
+
+async def show_key_rate(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Показывает ключевую ставку"""
+    try:
+        log_user_action(update.effective_user.id, "view_key_rate")
+        
+        key_rate_data = get_key_rate()
+        
+        if not key_rate_data:
+            await update.message.reply_text(
+                "❌ Не удалось получить ключевую ставку.",
+                reply_markup=create_main_reply_keyboard()
+            )
+            return
+        
+        message = format_key_rate_message(key_rate_data)
+        
+        await update.message.reply_text(message, parse_mode='HTML', reply_markup=create_main_reply_keyboard())
+        
+    except Exception as e:
+        logger.error(f"Ошибка при показе ключевой ставки: {e}")
+        await update.message.reply_text("❌ Ошибка при получении данных.", reply_markup=create_main_reply_keyboard())
+
+async def show_crypto_rates(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Показывает курсы криптовалют"""
+    try:
+        log_user_action(update.effective_user.id, "view_crypto_rates")
+        
+        # Показываем сообщение о загрузке
+        loading_message = "🔄 <b>Загружаем курсы криптовалют...</b>"
+        await update.message.reply_text(loading_message, parse_mode='HTML')
+        
+        # Получаем данные
+        crypto_rates = get_crypto_rates()
+        
+        # Если не удалось получить данные, используем fallback
+        if not crypto_rates:
+            logger.warning("Не удалось получить данные от CoinGecko, используем fallback")
+            crypto_rates = get_crypto_rates_fallback()
+        
+        if not crypto_rates:
+            error_msg = "❌ <b>Не удалось получить курсы криптовалют.</b>"
+            await update.message.reply_text(error_msg, parse_mode='HTML', reply_markup=create_main_reply_keyboard())
+            return
+        
+        message_text = format_crypto_rates_message(crypto_rates)
+        
+        # Добавляем предупреждение если используем демо-данные
+        if crypto_rates.get('source') == 'demo_fallback':
+            message_text += "\n\n⚠️ <i>Используются демонстрационные данные (CoinGecko API недоступен)</i>"
+        
+        await update.message.reply_text(message_text, parse_mode='HTML', reply_markup=create_main_reply_keyboard())
+        
+    except Exception as e:
+        logger.error(f"Ошибка при показе курсов криптовалют: {e}")
+        await update.message.reply_text("❌ Ошибка при получении данных.", reply_markup=create_main_reply_keyboard())
+
+async def show_ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Показывает интерфейс чата с ИИ"""
+    try:
+        log_user_action(update.effective_user.id, "start_ai_chat")
+        
+        if not DEEPSEEK_API_KEY:
+            error_msg = "❌ <b>Функционал ИИ временно недоступен</b>"
+            await update.message.reply_text(error_msg, parse_mode='HTML', reply_markup=create_main_reply_keyboard())
+            return
+        
+        # Активируем режим ИИ для пользователя
+        context.user_data['ai_mode'] = True
+        
+        welcome_message = (
+            "🤖 <b>УНИВЕРСАЛЬНЫЙ ИИ ПОМОЩНИК</b>\n\n"
+            "Задайте мне любой вопрос по любой теме!\n\n"
+            "🎯 <b>Основные направления:</b>\n"
+            "• 💰 Финансы и инвестиции\n"
+            "• 📊 Технологии и программирование\n"
+            "• 🎓 Образование и наука\n"
+            "• 🎨 Творчество и искусство\n"
+            "• 🏥 Здоровье и спорт\n"
+            "• 🌍 Путешествия и культура\n"
+            "• 🔧 Советы и решение проблем\n"
+            "• 💬 Общение и поддержка\n\n"
+            "Просто напишите ваш вопрос в чат!\n\n"
+            "<i>Для выхода из режима ИИ используйте кнопку 'Главное меню'</i>"
+        )
+        
+        reply_markup = create_ai_keyboard()
+        
+        await update.message.reply_text(welcome_message, parse_mode='HTML', reply_markup=reply_markup)
+            
+    except Exception as e:
+        logger.error(f"Ошибка при показе чата с ИИ: {e}")
+        await update.message.reply_text("❌ Ошибка при запуске ИИ помощника.", reply_markup=create_main_reply_keyboard())
+
+async def show_other_functions(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Показывает меню прочих функций"""
+    try:
+        log_user_action(update.effective_user.id, "view_other_functions")
+        
+        message = (
+            "🔧 <b>ДОПОЛНИТЕЛЬНЫЕ ФУНКЦИИ</b>\n\n"
+            "Выберите дополнительную функцию:\n\n"
+            
+            "🌤️ <b>Погода:</b>\n"
+            "• Текущая погода в Москве\n"
+            "• Ежедневная рассылка погоды\n"
+            "• Рекомендации по одежде\n\n"
+            
+            "📊 <b>Аналитика:</b>\n"
+            "• Статистика использования бота\n"
+            "• Графики изменения курсов\n"
+            "• Исторические данные\n\n"
+            
+            "⚙️ <b>Настройки:</b>\n"
+            "• Настройка уведомлений\n"
+            "• Выбор языка\n"
+            "• Часовой пояс\n\n"
+            
+            "🔍 <b>Дополнительно:</b>\n"
+            "• Информация о боте\n"
+            "• Связь с разработчиком\n"
+            "• Отзывы и предложения\n\n"
+            
+            "💡 <i>Новые функции добавляются регулярно!</i>"
+        )
+        
+        reply_markup = create_other_functions_keyboard()
+        
+        await update.message.reply_text(message, parse_mode='HTML', reply_markup=reply_markup)
+            
+    except Exception as e:
+        logger.error(f"Ошибка при показе прочих функций: {e}")
+        await update.message.reply_text("❌ Ошибка при загрузке функций.", reply_markup=create_main_reply_keyboard())
+
+async def show_weather(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Показывает текущую погоду в Москве"""
+    try:
+        log_user_action(update.effective_user.id, "view_weather")
+        
+        # Показываем сообщение о загрузке
+        loading_message = "🔄 <b>Загружаем данные о погоде...</b>"
+        await update.message.reply_text(loading_message, parse_mode='HTML')
+        
+        # Получаем данные о погоде
+        weather_data = get_weather_moscow()
+        message = format_weather_message(weather_data)
+        
+        await update.message.reply_text(message, parse_mode='HTML', reply_markup=create_main_reply_keyboard())
+        
+    except Exception as e:
+        logger.error(f"Ошибка при показе погоды: {e}")
+        await update.message.reply_text(
+            "❌ Ошибка при получении данных о погоде.",
+            reply_markup=create_main_reply_keyboard()
+        )
+
+# Обработчик текстовых сообщений
+async def handle_text_messages(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Обработчик текстовых сообщений для reply-меню"""
+    try:
+        user_message = update.message.text
+        user_id = update.effective_user.id
+        
+        # Логируем текстовое сообщение
+        log_user_action(user_id, "text_message", {"message": user_message})
+        
+        logger.info(f"Получено сообщение: '{user_message}' от пользователя {user_id}")
+        
+        # Обработка меню уведомлений
+        if user_message == "🔔 Уведомления":
+            logger.info(f"Пользователь {user_id} нажал кнопку Уведомления")
+            await show_alerts_menu(update, context)
+            return
+        
+        elif user_message == "💱 Создать уведомление":
+            logger.info(f"Пользователь {user_id} нажал кнопку Создать уведомление")
+            await start_create_alert(update, context)
+            return
+        
+        elif user_message == "📋 Мои уведомления":
+            logger.info(f"Пользователь {user_id} нажал кнопку Мои уведомления")
+            await myalerts_command(update, context)
+            return
+        
+        elif user_message == "🗑 Очистить все уведомления":
+            logger.info(f"Пользователь {user_id} нажал кнопку Очистить все уведомления")
+            user_id = update.effective_user.id
+            await clear_user_alerts(user_id)
+            await update.message.reply_text(
+                "✅ Все уведомления очищены",
+                reply_markup=create_alerts_keyboard()
+            )
+            return
+        
+        elif user_message == "🔙 Главное меню":
+            logger.info(f"Пользователь {user_id} нажал кнопку Главное меню")
+            context.user_data['ai_mode'] = False
+            # Очищаем данные создания уведомления
+            for key in ['creating_alert', 'alert_stage', 'alert_currency', 'alert_direction', 'alert_direction_display']:
+                context.user_data.pop(key, None)
+            await start(update, context)
+            return
+        
+        # Обработка процесса создания уведомления
+        if context.user_data.get('creating_alert'):
+            alert_stage = context.user_data.get('alert_stage')
+            logger.info(f"Пользователь {user_id} в процессе создания уведомления, этап: {alert_stage}")
+            
+            if alert_stage == 'select_currency':
+                await handle_currency_selection(update, context)
+                return
+            
+            elif alert_stage == 'select_direction':
+                await handle_direction_selection(update, context)
+                return
+            
+            elif alert_stage == 'enter_threshold':
+                await handle_threshold_input(update, context)
+                return
+        
+        # Обработка навигации назад
+        if user_message == "🔙 Назад к уведомлениям":
+            logger.info(f"Пользователь {user_id} нажал Назад к уведомлениям")
+            await show_alerts_menu(update, context)
+            return
+        
+        elif user_message == "🔙 Назад к валютам":
+            logger.info(f"Пользователь {user_id} нажал Назад к валютам")
+            context.user_data['alert_stage'] = 'select_currency'
+            await start_create_alert(update, context)
+            return
+        
+        elif user_message == "🔙 Назад к условиям":
+            logger.info(f"Пользователь {user_id} нажал Назад к условиям")
+            currency = context.user_data.get('alert_currency')
+            if currency:
+                context.user_data['alert_stage'] = 'select_direction'
+                await handle_currency_selection(update, context)
+            else:
+                await start_create_alert(update, context)
+            return
+        
+        # Обработка других функций
+        if user_message == "💱 Курсы валют":
+            await show_currency_rates(update, context)
+        elif user_message == "₿ Криптовалюты":
+            await show_crypto_rates(update, context)
+        elif user_message == "💎 Ключевая ставка":
+            await show_key_rate(update, context)
+        elif user_message == "🤖 ИИ помощник":
+            await show_ai_chat(update, context)
+        elif user_message == "🌤️ Погода":
+            await show_weather(update, context)
+        elif user_message == "🔧 Другие функции":
+            await show_other_functions(update, context)
+        elif user_message == "❓ Помощь":
+            await help_command(update, context)
+        elif user_message == "📊 Статистика":
+            await show_bot_stats(update, context)
+        elif user_message == "⚙️ Настройки":
+            await show_settings(update, context)
+        elif user_message == "ℹ️ О боте":
+            await show_bot_about(update, context)
+        elif user_message == "💡 Примеры вопросов":
+            examples_text = (
+                "💡 <b>ПРИМЕРЫ ВОПРОСОВ ДЛЯ ИИ:</b>\n\n"
+                "💰 <b>Финансы:</b>\n"
+                "• Как начать инвестировать с маленькой суммой?\n"
+                "• Каков прогноз курса доллара на месяц?\n"
+                "• В чем разница между акциями и облигациями?\n\n"
+                "📊 <b>Технологии:</b>\n"
+                "• Объясни что такое блокчейн простыми словами\n"
+                "• Как создать телеграм бота на Python?\n"
+                "• Какие языки программирования учить в 2024?\n\n"
+                "🎓 <b>Образование:</b>\n"
+                "• Как эффективно учиться новому?\n"
+                "• Объясни теорию относительности Эйнштейна\n"
+                "• Какие навыки будут востребованы в будущем?\n\n"
+                "🎨 <b>Творчество:</b>\n"
+                "• Придумай идею для стартапа в IT\n"
+                "• Напиши короткое стихотворение о технологии\n"
+                "• Какие тренды в дизайне сейчас популярны?\n\n"
+                "🏥 <b>Здоровье:</b>\n"
+                "• Как поддерживать здоровый образ жизни?\n"
+                "• Какие упражнения делать при сидячей работе?\n"
+                "• Как бороться со стрессом на работе?\n\n"
+                "🌍 <b>Путешествия:</b>\n"
+                "• Куда поехать отдыхать с ограниченным бюджетом?\n"
+                "• Какие документы нужны для поездки в Европу?\n"
+                "• Как путешествовать экологично?\n\n"
+                "💬 <b>Просто поговорить:</b>\n"
+                "• Расскажи интересный факт о космосе\n"
+                "• Что думаешь об искусственном интеллекте?\n"
+                "• Давай обсудим будущее технологий"
+            )
+            await update.message.reply_text(
+                examples_text,
+                parse_mode='HTML',
+                reply_markup=create_main_reply_keyboard()
+            )
+        elif user_message == "🔄 Новый вопрос":
+            await show_ai_chat(update, context)
+        
+        # Если сообщение не распознано как команда меню, пробуем обработать как запрос к ИИ
+        elif context.user_data.get('ai_mode') == True:
+            await handle_ai_message(update, context)
+        else:
+            # Если не режим ИИ и не команда меню, показываем подсказку
+            await update.message.reply_text(
+                "🤔 <b>Не понял вашу команду</b>\n\n"
+                "Используйте кнопки меню ниже или команды:\n"
+                "/start - Главное меню\n"
+                "/help - Справка по командам",
+                parse_mode='HTML',
+                reply_markup=create_main_reply_keyboard()
+            )
+                
+    except Exception as e:
+        logger.error(f"Ошибка в обработчике текстовых сообщений: {e}")
+        await update.message.reply_text(
+            "❌ Произошла ошибка при обработке сообщения.",
+            reply_markup=create_main_reply_keyboard()
+        )
+
+# Остальные функции (оставлены без изменений)
+async def handle_ai_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Обрабатывает текстовые сообщения для ИИ"""
+    try:
+        user_id = update.effective_user.id
+        user_message = update.message.text
+        
+        # Проверяем, не является ли сообщение командой
+        if user_message.startswith('/'):
+            return
+            
+        # Проверяем, активирован ли режим ИИ для пользователя
+        if context.user_data.get('ai_mode') != True:
+            return
+            
+        # Логируем запрос к ИИ
+        log_user_action(user_id, "ai_request", {"message_length": len(user_message)})
+        
+        # Показываем индикатор набора сообщения
+        await update.message.chat.send_action(action="typing")
+        
+        # Отправляем запрос к DeepSeek
+        ai_response = await ask_deepseek(user_message, context)
+        
+        # Разбиваем длинные сообщения на части
+        message_parts = await split_long_message(ai_response)
+        
+        # Отправляем первую часть с клавиатурой
+        first_part = message_parts[0]
+        if len(message_parts) > 1:
+            first_part += f"\n\n📄 <i>Часть 1 из {len(message_parts)}</i>"
+        
+        keyboard = [
+            [KeyboardButton("🔄 Новый вопрос")],
+            [KeyboardButton("🔙 Главное меню")]
+        ]
+        reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+        
+        await update.message.reply_text(
+            f"🤖 <b>ИИ Ассистент:</b>\n\n{first_part}",
+            parse_mode='HTML',
+            reply_markup=reply_markup
+        )
+        
+        # Отправляем остальные части
+        for i, part in enumerate(message_parts[1:], 2):
+            part_text = part
+            if i < len(message_parts):
+                part_text += f"\n\n📄 <i>Часть {i} из {len(message_parts)}</i>"
+            
+            await update.message.reply_text(
+                part_text,
+                parse_mode='HTML'
+            )
+        
+    except Exception as e:
+        logger.error(f"Ошибка в обработчике ИИ сообщений: {e}")
+        await update.message.reply_text(
+            "❌ Произошла ошибка при обработке вашего запроса.",
+            reply_markup=create_main_reply_keyboard()
+        )
+
+async def alert_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Создание уведомления о курсе валюты через команду"""
+    try:
+        log_user_action(update.effective_user.id, "create_alert", {"args": context.args})
+        
+        args = context.args
+        
+        if len(args) != 4:
+            await update.message.reply_text(
+                "📝 <b>Использование:</b> /alert &lt;из&gt; &lt;в&gt; &lt;порог&gt; &lt;above|below&gt;\n\n"
+                "💡 <b>Примеры:</b>\n"
+                "• <code>/alert USD RUB 80 above</code> - уведомить когда USD выше 80 руб.\n"
+                "• <code>/alert EUR RUB 90 below</code> - уведомить когда EUR ниже 90 руб.\n"
+                "• <code>/alert AED RUB 22 above</code> - уведомить когда AED выше 22 руб.",
+                parse_mode='HTML',
+                reply_markup=create_main_reply_keyboard()
+            )
+            return
+        
+        from_curr, to_curr = args[0].upper(), args[1].upper()
+        
+        # Проверяем поддерживаемые валюты
+        supported_currencies = ['USD', 'EUR', 'GBP', 'JPY', 'CNY', 'CHF', 'CAD', 'AUD', 'TRY', 'KZT', 'AED']
+        if from_curr not in supported_currencies:
+            await update.message.reply_text(
+                f"❌ Валюта <b>{from_curr}</b> не поддерживается.\n\n"
+                f"💱 <b>Доступные валюты:</b> {', '.join(supported_currencies)}",
+                parse_mode='HTML',
+                reply_markup=create_main_reply_keyboard()
+            )
+            return
+        
+        # Проверяем, что целевая валюта - RUB
+        if to_curr != 'RUB':
+            await update.message.reply_text(
+                "❌ В настоящее время поддерживаются только уведомления для пар с RUB.\n"
+                "💡 Используйте: <code>/alert USD RUB 80 above</code>",
+                parse_mode='HTML',
+                reply_markup=create_main_reply_keyboard()
+            )
+            return
+        
+        try:
+            threshold = float(args[2])
+            if threshold <= 0:
+                raise ValueError("Порог должен быть положительным числом")
+        except ValueError:
+            await update.message.reply_text(
+                "❌ Порог должен быть положительным числом.",
+                reply_markup=create_main_reply_keyboard()
+            )
+            return
+        
+        direction = args[3].lower()
+        if direction not in ['above', 'below']:
+            await update.message.reply_text(
+                "❌ Направление должно быть 'above' или 'below'.",
+                reply_markup=create_main_reply_keyboard()
+            )
+            return
+        
+        user_id = update.effective_message.from_user.id
+        
+        # Добавляем уведомление
+        await add_alert(user_id, from_curr, to_curr, threshold, direction)
+        
+        # Получаем текущий курс для информации
+        rates_today, _, _, _ = get_currency_rates_with_tomorrow()
+        current_rate = "N/A"
+        if rates_today and from_curr in rates_today:
+            current_rate = f"{rates_today[from_curr]['value']:.2f}"
+        
+        success_message = (
+            f"✅ <b>УВЕДОМЛЕНИЕ УСТАНОВЛЕНО!</b>\n\n"
+            f"💱 <b>Пара:</b> {from_curr}/{to_curr}\n"
+            f"🎯 <b>Порог:</b> {threshold} руб.\n"
+            f"📊 <b>Условие:</b> курс <b>{'выше' if direction == 'above' else 'ниже'}</b> {threshold} руб.\n"
+            f"💹 <b>Текущий курс:</b> {current_rate} руб.\n\n"
+            f"💡 Уведомление будет проверяться каждые 30 минут\n"
+            f"🔔 При срабатывании вы получите сообщение"
+        )
+        
+        await update.message.reply_text(
+            success_message,
+            parse_mode='HTML',
+            reply_markup=create_main_reply_keyboard()
+        )
+        
+    except Exception as e:
+        logger.error(f"Ошибка в команде /alert: {e}")
+        await update.message.reply_text(
+            f"❌ Произошла ошибка при установке уведомления:\n<code>{str(e)}</code>",
+            parse_mode='HTML',
+            reply_markup=create_main_reply_keyboard()
+        )
+
+async def myalerts_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Показывает активные уведомления пользователя"""
+    try:
+        user_id = update.effective_user.id
+        log_user_action(user_id, "view_my_alerts")
+        
+        alerts = await get_user_alerts(user_id)
+        
+        if not alerts:
+            message = (
+                "📭 <b>У вас нет активных уведомлений.</b>\n\n"
+                "💡 Нажмите <b>💱 Создать уведомление</b> чтобы добавить первое уведомление!"
+            )
+            
+            await update.message.reply_text(message, parse_mode='HTML', reply_markup=create_alerts_keyboard())
+            return
+        
+        message = "🔔 <b>ВАШИ АКТИВНЫЕ УВЕДОМЛЕНИЯ</b>\n\n"
+        
+        for i, alert in enumerate(alerts, 1):
+            from_curr = alert['from_currency']
+            to_curr = alert['to_currency']
+            threshold = alert['threshold']
+            direction = alert['direction']
+            
+            # Получаем текущий курс для сравнения
+            rates_today, _, _, _ = get_currency_rates_with_tomorrow()
+            current_rate = "N/A"
+            if rates_today and from_curr in rates_today:
+                current_rate = f"{rates_today[from_curr]['value']:.2f}"
+            
+            direction_display = 'выше' if direction == 'above' else 'ниже'
+            status_icon = "🟢" if alert.get('is_active', True) else "🔴"
+            
+            message += (
+                f"{status_icon} <b>{i}. {from_curr} → {to_curr}</b>\n"
+                f"   🎯 Порог: <b>{threshold} руб.</b>\n"
+                f"   📊 Условие: курс <b>{direction_display}</b> {threshold} руб.\n"
+                f"   💱 Текущий курс: <b>{current_rate} руб.</b>\n\n"
+            )
+        
+        message += (
+            "⏰ <i>Уведомления проверяются каждые 30 минут автоматически</i>\n"
+            "💡 <i>При срабатывании уведомление автоматически удаляется</i>"
+        )
+        
+        reply_markup = create_alerts_keyboard()
+        
+        await update.message.reply_text(message, parse_mode='HTML', reply_markup=reply_markup)
+        
+    except Exception as e:
+        logger.error(f"Ошибка в команде /myalerts: {e}")
+        error_message = "❌ <b>Ошибка при получении уведомлений.</b>"
+        await update.message.reply_text(error_message, parse_mode='HTML', reply_markup=create_alerts_keyboard())
+
+# Остальные функции (show_bot_stats, show_bot_about, show_settings, status_command, logs_command, clear_logs_command, myid_command)
+# остаются без изменений...
+
+async def show_bot_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Показывает статистику бота"""
+    try:
+        log_user_action(update.effective_user.id, "view_bot_stats")
+        
+        from db import get_all_users, get_all_alerts
+        
+        users = await get_all_users()
+        alerts = await get_all_alerts()
+        
+        total_users = len(users)
+        total_alerts = len(alerts)
+        active_alerts = len([alert for alert in alerts if alert.get('is_active', True)])
+        
+        message = (
+            "📊 <b>СТАТИСТИКА БОТА</b>\n\n"
+            f"👥 <b>Всего пользователей:</b> {total_users}\n"
+            f"🔔 <b>Всего уведомлений:</b> {total_alerts}\n"
+            f"🟢 <b>Активных уведомлений:</b> {active_alerts}\n"
+            f"🔴 <b>Выполненных уведомлений:</b> {total_alerts - active_alerts}\n\n"
+            
+            "📈 <b>Популярные валюты для уведомлений:</b>\n"
+        )
+        
+        # Анализируем популярные валюты
+        currency_stats = {}
+        for alert in alerts:
+            currency = alert['from_currency']
+            currency_stats[currency] = currency_stats.get(currency, 0) + 1
+        
+        if currency_stats:
+            sorted_currencies = sorted(currency_stats.items(), key=lambda x: x[1], reverse=True)
+            for currency, count in sorted_currencies[:5]:  # Топ-5 валют
+                message += f"   • {currency}: {count} уведомлений\n"
+        else:
+            message += "   <i>Нет данных</i>\n"
+        
+        message += "\n💡 <i>Статистика обновляется в реальном времени</i>"
+        
+        await update.message.reply_text(message, parse_mode='HTML', reply_markup=create_other_functions_keyboard())
+        
+    except Exception as e:
+        logger.error(f"Ошибка при показе статистики: {e}")
+        await update.message.reply_text(
+            "❌ Ошибка при загрузке статистики.",
+            reply_markup=create_other_functions_keyboard()
+        )
+
+async def show_bot_about(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Показывает информацию о боте"""
+    try:
+        log_user_action(update.effective_user.id, "view_bot_about")
+        
+        message = (
+            "ℹ️ <b>ИНФОРМАЦИЯ О БОТЕ</b>\n\n"
+            
+            "🤖 <b>Финансовый бот с ИИ помощником</b>\n\n"
+            
+            "📚 <b>Основные возможности:</b>\n"
+            "• 💱 Курсы валют ЦБ РФ с прогнозом\n"
+            "• ₿ Криптовалюты через CoinGecko API\n"
+            "• 💎 Ключевая ставка ЦБ РФ\n"
+            "• 🤖 Универсальный ИИ помощник\n"
+            "• 🔔 Умные уведомления\n"
+            "• 🌅 Ежедневная рассылка\n\n"
+            
+            "🛠 <b>Технологии:</b>\n"
+            "• Python 3.8+\n"
+            "• PostgreSQL\n"
+            "• python-telegram-bot\n"
+            "• DeepSeek AI API\n"
+            "• CoinGecko API\n"
+            "• ЦБ РФ API\n\n"
+            
+            "📞 <b>Поддержка:</b>\n"
+            "• Для связи с разработчиком и сообщения об ошибках: korin2008@ya.ru\n"
+            "Собрал данного бота Санёк\n\n"
+            
+            "💡 <b>Версия:</b> 1.0.9\n"
+            "🔄 <b>Последнее обновление:</b> Октябрь 2024\n\n"
+            
+            "⭐ <i>Бот постоянно развивается и улучшается!</i>"
+        )
+        
+        await update.message.reply_text(message, parse_mode='HTML', reply_markup=create_other_functions_keyboard())
+        
+    except Exception as e:
+        logger.error(f"Ошибка при показе информации о боте: {e}")
+        await update.message.reply_text(
+            "❌ Ошибка при загрузке информации.",
+            reply_markup=create_other_functions_keyboard()
+        )
+
+async def show_settings(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Показывает настройки"""
+    try:
+        log_user_action(update.effective_user.id, "view_settings")
+        
+        message = (
+            "⚙️ <b>НАСТРОЙКИ</b>\n\n"
+            
+            "🔔 <b>Уведомления:</b>\n"
+            "• Ежедневная рассылка: <b>Включено</b>\n"
+            "• Погода: <b>Включено</b>\n"
+            "• Курсы валют: <b>Включено</b>\n"
+            "• Проверка уведомлений: <b>Каждые 30 минут</b>\n\n"
+            
+            "🌤️ <b>Погода:</b>\n"
+            "• Город: <b>Москва</b>\n"
+            "• Ежедневная рассылка: <b>08:00</b>\n"
+            "• Единицы измерения: <b>°C, м/с</b>\n\n"
+            
+            "🌍 <b>Региональные настройки:</b>\n"
+            "• Часовой пояс: <b>Москва (UTC+3)</b>\n"
+            "• Язык: <b>Русский</b>\n\n"
+            
+            "📊 <b>Отображение:</b>\n"
+            "• Формат чисел: <b>С разделителями</b>\n"
+            "• Валюта по умолчанию: <b>RUB</b>\n\n"
+            
+            "💡 <i>Настройки будут доступны для изменения в будущих обновлениях</i>"
+        )
+        
+        await update.message.reply_text(message, parse_mode='HTML', reply_markup=create_other_functions_keyboard())
+        
+    except Exception as e:
+        logger.error(f"Ошибка при показе настроек: {e}")
+        await update.message.reply_text(
+            "❌ Ошибка при загрузке настроек.",
+            reply_markup=create_other_functions_keyboard()
+        )
+
+async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Показывает статус бота и системную информацию"""
+    try:
+        import psutil
+        import platform
+        from datetime import datetime
+        from config import ADMIN_IDS
+        
+        # Системная информация
+        system_info = f"🖥️ <b>Системная информация</b>\n"
+        system_info += f"• OS: {platform.system()} {platform.release()}\n"
+        system_info += f"• Python: {platform.python_version()}\n"
+        system_info += f"• CPU: {psutil.cpu_percent()}%\n"
+        system_info += f"• Memory: {psutil.virtual_memory().percent}%\n"
+        system_info += f"• Disk: {psutil.disk_usage('/').percent}%\n\n"
+        
+        # Информация о боте
+        from db import get_all_users, get_all_alerts
+        users = await get_all_users()
+        alerts = await get_all_alerts()
+        
+        bot_info = f"🤖 <b>Информация о боте</b>\n"
+        bot_info += f"• Версия: 1.0.0\n"
+        bot_info += f"• Запущен: {datetime.now().strftime('%d.%m.%Y %H:%M')}\n"
+        bot_info += f"• Пользователей: {len(users)}\n"
+        bot_info += f"• Уведомлений: {len(alerts)}\n"
+        bot_info += f"• Администраторов: {len(ADMIN_IDS)}\n\n"
+        
+        # Статус сервисов
+        services_info = f"🔧 <b>Статус сервисов</b>\n"
+        
+        # Проверка ЦБ РФ
+        try:
+            from services import get_currency_rates_for_date
+            rates, _ = get_currency_rates_for_date(datetime.now().strftime('%d/%m/%Y'))
+            services_info += "• ЦБ РФ: ✅ Работает\n"
+        except:
+            services_info += "• ЦБ РФ: ❌ Ошибка\n"
+            
+        # Проверка CoinGecko
+        try:
+            from services import get_crypto_rates
+            crypto_data = get_crypto_rates()
+            services_info += "• CoinGecko: ✅ Работает\n" if crypto_data else "• CoinGecko: ❌ Ошибка\n"
+        except:
+            services_info += "• CoinGecko: ❌ Ошибка\n"
+            
+        # Проверка DeepSeek
+        from config import DEEPSEEK_API_KEY
+        services_info += f"• DeepSeek AI: {'✅ Доступен' if DEEPSEEK_API_KEY else '❌ Не настроен'}\n"
+        
+        # Проверка погоды
+        from config import WEATHER_API_KEY
+        services_info += f"• Погода: {'✅ Настроена' if WEATHER_API_KEY and WEATHER_API_KEY != 'demo_key_12345' else '⚠️ Демо-данные'}\n"
+        
+        full_message = system_info + bot_info + services_info
+        full_message += f"\n💡 <i>Бот работает стабильно</i>"
+        
+        await update.message.reply_text(full_message, parse_mode='HTML', reply_markup=create_main_reply_keyboard())
+        
+    except Exception as e:
+        logger.error(f"Ошибка в команде status: {e}")
+        await update.message.reply_text(
+            "❌ Ошибка при получении статуса системы",
+            reply_markup=create_main_reply_keyboard()
+        )
+
+async def logs_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Показывает последние логи (только для администраторов)"""
+    try:
+        from config import ADMIN_IDS
+        
+        if not ADMIN_IDS:
+            await update.message.reply_text("❌ Администраторы не настроены")
+            return
+            
+        if update.effective_user.id not in ADMIN_IDS:
+            await update.message.reply_text("❌ Эта команда только для администраторов")
+            return
+            
+        # Чтение последних логов
+        try:
+            with open('bot.log', 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+                last_lines = lines[-20:]  # Последние 20 строк
+                log_text = ''.join(last_lines)
+        except FileNotFoundError:
+            log_text = "Файл логов не найден"
+        
+        if len(log_text) > 4000:
+            log_text = log_text[-4000:]  # Обрезаем если слишком длинный
+            
+        await update.message.reply_text(
+            f"📋 <b>Последние логи:</b>\n<code>{log_text}</code>",
+            parse_mode='HTML',
+            reply_markup=create_main_reply_keyboard()
+        )
+        
+    except Exception as e:
+        logger.error(f"Ошибка в команде logs: {e}")
+        await update.message.reply_text(
+            "❌ Ошибка при чтении логов",
+            reply_markup=create_main_reply_keyboard()
+        )
+
+async def clear_logs_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Очищает логи (только для администраторов)"""
+    try:
+        from config import ADMIN_IDS
+        
+        if not ADMIN_IDS:
+            await update.message.reply_text("❌ Администраторы не настроены")
+            return
+            
+        if update.effective_user.id not in ADMIN_IDS:
+            await update.message.reply_text("❌ Эта команда только для администраторов")
+            return
+            
+        # Очистка файла логов
+        open('bot.log', 'w').close()
+        
+        await update.message.reply_text(
+            "✅ Логи успешно очищены",
+            reply_markup=create_main_reply_keyboard()
+        )
+        
+    except Exception as e:
+        logger.error(f"Ошибка в команде clear_logs: {e}")
+        await update.message.reply_text(
+            "❌ Ошибка при очистке логов",
+            reply_markup=create_main_reply_keyboard()
+        )
+
+async def myid_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Показывает ID пользователя"""
+    user = update.effective_user
+    await update.message.reply_text(
+        f"🆔 Ваш ID: <code>{user.id}</code>\n"
+        f"👤 Имя: {user.first_name or 'Не указано'}\n"
+        f"📛 Username: @{user.username or 'Не указан'}",
+        parse_mode='HTML',
+        reply_markup=create_main_reply_keyboard()
+    )
+
+# Обработчики callback-кнопок (оставлены для обратной совместимости)
+async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Обработчик нажатий на inline-кнопки"""
+    try:
+        query = update.callback_query
+        await query.answer()
+        
+        data = query.data
+        
+        if data == 'help':
+            await help_command(update, context)
+        elif data == 'back_to_main':
+            context.user_data['ai_mode'] = False
+            await start(update, context)
+        elif data == 'currency_rates':
+            await show_currency_rates(update, context)
+        elif data == 'crypto_rates':
+            await show_crypto_rates(update, context)
+        elif data == 'key_rate':
+            await show_key_rate(update, context)
+        elif data == 'ai_chat':
+            await show_ai_chat(update, context)
+        elif data == 'my_alerts':
+            await myalerts_command(update, context)
+        elif data == 'other_functions':
+            await show_other_functions(update, context)
+        elif data == 'weather':
+            await show_weather(update, context)
+        elif data == 'stats':
+            await show_bot_stats(update, context)
+        elif data == 'about':
+            await show_bot_about(update, context)
+        elif data == 'settings':
+            await show_settings(update, context)
+        elif data == 'clear_all_alerts':
+            user_id = update.effective_user.id
+            await clear_user_alerts(user_id)
+            await query.edit_message_text(
+                "✅ Все уведомления очищены",
+                reply_markup=create_main_reply_keyboard()
+            )
+        elif data == 'create_alert':
+            await query.edit_message_text(
+                "📝 <b>Создание уведомления</b>\n\n"
+                "Используйте команду:\n"
+                "<code>/alert USD RUB 80 above</code>\n\n"
+                "💡 <b>Примеры:</b>\n"
+                "• <code>/alert USD RUB 85 above</code> - уведомит когда USD выше 85 руб.\n"
+                "• <code>/alert EUR RUB 90 below</code> - уведомит когда EUR ниже 90 руб.",
+                parse_mode='HTML',
+                reply_markup=create_main_reply_keyboard()
+            )
+        else:
+            await query.edit_message_text(
+                "🔄 <b>Функция в разработке</b>",
+                parse_mode='HTML',
+                reply_markup=create_main_reply_keyboard()
+            )
+
+    except Exception as e:
+        logger.error(f"Ошибка в обработчике кнопок: {e}")
