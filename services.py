@@ -30,7 +30,7 @@ def get_currency_rates_for_date(date_req):
         currency_codes = {
             'R01235': 'USD',  'R01239': 'EUR',  'R01035': 'GBP',  'R01820': 'JPY',
             'R01375': 'CNY',  'R01775': 'CHF',  'R01350': 'CAD',  'R01010': 'AUD',
-            'R01700': 'TRY',  'R01335': 'KZT',
+            'R01700': 'TRY',  'R01335': 'KZT', 'R01230': 'AED',
         }
         
         for valute in root.findall('Valute'):
