@@ -426,7 +426,10 @@ def get_crypto_rates():
         logger.info(f"Успешно обработано {valid_count} криптовалют")
         
         if crypto_rates:
-            crypto_rates['update_time'] = datetime.now().strftime('%d.%m.%Y %H:%M')
+            # Исправляем время на московское (UTC+3)
+            from datetime import timezone, timedelta
+            moscow_tz = timezone(timedelta(hours=3))
+            crypto_rates['update_time'] = datetime.now(moscow_tz).strftime('%d.%m.%Y %H:%M')
             crypto_rates['source'] = 'coingecko'
             return crypto_rates
         else:
@@ -490,7 +493,9 @@ def get_crypto_rates_fallback():
             }
         }
         
-        crypto_rates['update_time'] = datetime.now().strftime('%d.%m.%Y %H:%M')
+        from datetime import timezone, timedelta
+        moscow_tz = timezone(timedelta(hours=3))
+        crypto_rates['update_time'] = datetime.now(moscow_tz).strftime('%d.%m.%Y %H:%M')
         crypto_rates['source'] = 'demo_fallback'
         
         logger.info("Используются демо-данные криптовалют")
