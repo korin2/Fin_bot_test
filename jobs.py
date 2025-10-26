@@ -20,7 +20,7 @@ def setup_jobs(application):
             
             # Ежедневная рассылка погоды в 08:00 (05:00 UTC)
             # Временно для теста - запустить через 1 минуту после старта бота
-            job_queue.run_once(send_daily_weather, when=60, name="test_weather")
+            job_queue.run_once(send_daily_weather, when=60, name="test_weather"
            # job_queue.run_daily(
               #  send_daily_weather,
               #  time=datetime.strptime("16:27", "%H:%M").time(),
