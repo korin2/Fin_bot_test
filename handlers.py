@@ -486,7 +486,7 @@ async def alert_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         from_curr, to_curr = args[0].upper(), args[1].upper()
         
         # Проверяем поддерживаемые валюты
-        supported_currencies = ['USD', 'EUR', 'GBP', 'JPY', 'CNY', 'CHF', 'CAD', 'AUD', 'TRY', 'KZT']
+        supported_currencies = ['USD', 'EUR', 'GBP', 'JPY', 'CNY', 'CHF', 'CAD', 'AUD', 'TRY', 'KZT', 'AED']
         if from_curr not in supported_currencies:
             await update.message.reply_text(
                 f"❌ Валюта <b>{from_curr}</b> не поддерживается.\n\n"
