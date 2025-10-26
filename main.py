@@ -118,6 +118,9 @@ async def main_async():
         # Обработчики кнопок и сообщений
         application.add_handler(CallbackQueryHandler(button_handler))
         application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_messages))
+        
+        # Обработчик статуса проверки бота
+        application.add_handler(CommandHandler("status", status_command))
 
         # Настройка фоновых задач
         try:
