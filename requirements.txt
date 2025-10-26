@@ -5,3 +5,4 @@ asyncpg==0.29.0
 beautifulsoup4==4.12.2
 lxml==4.9.3
 apscheduler==3.10.4
+psutil==5.9.6
