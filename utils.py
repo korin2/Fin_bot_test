@@ -64,7 +64,7 @@ def create_main_reply_keyboard():
             KeyboardButton("❓ Помощь")
         ]
     ]
-    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True, persistent=True)
+    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
 def create_other_functions_keyboard():
     """Создает клавиатуру для раздела 'Другие функции'"""
@@ -78,4 +78,21 @@ def create_other_functions_keyboard():
             KeyboardButton("🔙 Главное меню")
         ]
     ]
-    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True, persistent=True)
+    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+
+def create_ai_keyboard():
+    """Создает клавиатуру для режима ИИ"""
+    keyboard = [
+        [KeyboardButton("💡 Примеры вопросов")],
+        [KeyboardButton("🔙 Главное меню")]
+    ]
+    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+
+def create_alerts_keyboard():
+    """Создает клавиатуру для раздела уведомлений"""
+    keyboard = [
+        [KeyboardButton("🗑 Очистить все уведомления")],
+        [KeyboardButton("💱 Создать уведомление")],
+        [KeyboardButton("🔙 Главное меню")]
+    ]
+    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
