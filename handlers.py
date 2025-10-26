@@ -778,3 +778,27 @@ async def show_weather(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             "❌ Ошибка при получении данных о погоде.",
             reply_markup=create_back_button()
         )
+
+
+# состояние бота
+
+async def health_check(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Проверка состояния бота"""
+    try:
+        from db import get_all_users
+        users = await get_all_users()
+        
+        health_status = {
+            'status': 'healthy',
+            'users_count': len(users),
+            'timestamp': datetime.now().isoformat(),
+            'version': '1.0.0'
+        }
+        
+        await update.message.reply_text(
+            f"🟢 Бот работает нормально\n"
+            f"👥 Пользователей: {len(users)}\n"
+            f"🕒 Время: {datetime.now().strftime('%d.%m.%Y %H:%M')}"
+        )
+    except Exception as e:
+        await update.message.reply_text(f"🔴 Ошибка здоровья бота: {e}")
