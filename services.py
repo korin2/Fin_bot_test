@@ -6,6 +6,8 @@ from datetime import datetime, timedelta
 import logging
 from config import CBR_API_BASE, COINGECKO_API_BASE, DEEPSEEK_API_BASE, DEEPSEEK_API_KEY, logger
 from telegram.ext import ContextTypes
+from functools import lru_cache
+import time
 
 # =============================================================================
 # ФУНКЦИИ ДЛЯ РАБОТЫ С КУРСАМИ ВАЛЮТ ЦБ РФ
@@ -1104,3 +1106,25 @@ async def send_daily_weather(context: ContextTypes.DEFAULT_TYPE):
                 
     except Exception as e:
         logger.error(f"Ошибка при ежедневной рассылке погоды: {e}")
+
+
+# =============================================================================
+# Кэширование запросов к API
+# =============================================================================
+
+class RateLimiter:
+    def __init__(self, calls_per_minute: int = 30):
+        self.calls_per_minute = calls_per_minute
+        self.calls = []
+    
+    def wait_if_needed(self):
+        now = time.time()
+        self.calls = [call for call in self.calls if now - call < 60]
+        if len(self.calls) >= self.calls_per_minute:
+            sleep_time = 60 - (now - self.calls[0])
+            if sleep_time > 0:
+                time.sleep(sleep_time)
+        self.calls.append(now)
+
+# Использование в функциях API
+rate_limiter = RateLimiter()
