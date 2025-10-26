@@ -1260,13 +1260,4 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     except Exception as e:
         logger.error(f"Ошибка в обработчике кнопок: {e}")
 
-# проверка погоды ! 
-async def test_weather_now(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Немедленная проверка рассылки погоды"""
-    try:
-        from services import send_daily_weather
-        await send_daily_weather(context)
-        await update.message.reply_text("✅ Рассылка погоды выполнена")
-    except Exception as e:
-        logger.error(f"Ошибка рассылки: {e}")
-        await update.message.reply_text(f"❌ Ошибка: {e}")
+
