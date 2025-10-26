@@ -897,8 +897,8 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 async def logs_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Показывает последние логи (только для администраторов)"""
     try:
-        # ЗАМЕНИТЕ 661920 на ваш реальный Telegram ID
-        ADMIN_IDS = [661920]  # Ваш ID из логов: user_id=661920
+        # ЗАМЕНИТЕ на ваш реальный Telegram ID
+        ADMIN_IDS = [661920]  # Ваш ID 
         
         if update.effective_user.id not in ADMIN_IDS:
             await update.message.reply_text("❌ Эта команда только для администраторов")
@@ -953,7 +953,7 @@ async def clear_logs_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
             reply_markup=create_main_reply_keyboard()
         )
 
-# Временная команда для получения ID
+# команда для получения ID
 async def myid_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Показывает ID пользователя"""
     user = update.effective_user
