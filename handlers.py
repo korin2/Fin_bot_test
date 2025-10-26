@@ -477,7 +477,8 @@ async def alert_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
                 "📝 <b>Использование:</b> /alert &lt;из&gt; &lt;в&gt; &lt;порог&gt; &lt;above|below&gt;\n\n"
                 "💡 <b>Примеры:</b>\n"
                 "• <code>/alert USD RUB 80 above</code> - уведомить когда USD выше 80 руб.\n"
-                "• <code>/alert EUR RUB 90 below</code> - уведомить когда EUR ниже 90 руб.",
+                "• <code>/alert EUR RUB 90 below</code> - уведомить когда EUR ниже 90 руб.\n"
+                "• <code>/alert AED RUB 22 above</code> - уведомить когда AED выше 22 руб.",
                 parse_mode='HTML',
                 reply_markup=create_main_reply_keyboard()
             )
@@ -485,7 +486,7 @@ async def alert_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         
         from_curr, to_curr = args[0].upper(), args[1].upper()
         
-        # Проверяем поддерживаемые валюты
+        # Проверяем поддерживаемые валюты (добавлен AED)
         supported_currencies = ['USD', 'EUR', 'GBP', 'JPY', 'CNY', 'CHF', 'CAD', 'AUD', 'TRY', 'KZT', 'AED']
         if from_curr not in supported_currencies:
             await update.message.reply_text(
