@@ -181,7 +181,7 @@ Railway автоматически:
 - "Объясни теорию относительности"
 
 ### Получение курсов
-- **Валюты**: USD, EUR, GBP, JPY, CNY, CHF, CAD, AUD, TRY, KZT
+- **Валюты**: USD, EUR, GBP, JPY, CNY, CHF, CAD, AUD, TRY, KZT, AED
 - **Криптовалюты**: BTC, ETH, BNB, XRP, ADA, SOL, DOT, DOGE, TRX, LTC
 
 ### Завершение работы
