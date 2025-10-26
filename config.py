@@ -25,6 +25,20 @@ WEATHER_API_KEY = os.getenv('API_weather')
 if not WEATHER_API_KEY:
     logger.warning("API ключ погоды не найден, будут использоваться демо-данные")
 
+# ID администраторов
+ADMIN_IDS = os.getenv('ADMIN_IDS', '')  # Получаем строку с ID
+if ADMIN_IDS:
+    try:
+        # Преобразуем строку "123,456,789" в список [123, 456, 789]
+        ADMIN_IDS = [int(id.strip()) for id in ADMIN_IDS.split(',')]
+        logger.info(f"Загружены ID администраторов: {ADMIN_IDS}")
+    except ValueError as e:
+        logger.error(f"Ошибка парсинга ADMIN_IDS: {e}")
+        ADMIN_IDS = []
+else:
+    logger.warning("ADMIN_IDS не настроены, команды администратора будут недоступны")
+    ADMIN_IDS = []
+
 # API URLs
 CBR_API_BASE = "https://www.cbr.ru/"
 COINGECKO_API_BASE = "https://api.coingecko.com/api/v3/"
