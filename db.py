@@ -1,5 +1,6 @@
 import asyncpg
 import os
+from contextlib import asynccontextmanager
 
 DATABASE_URL = os.getenv('DATABASE_URL')
 
@@ -190,3 +191,23 @@ async def clear_user_alerts(user_id: int):
     except Exception as e:
         print(f"Ошибка при очистке уведомлений пользователя: {e}")
         raise
+@asynccontextmanager
+async def get_connection():
+    conn = None
+    try:
+        conn = await asyncpg.connect(DATABASE_URL)
+        yield conn
+    except Exception as e:
+        logger.error(f"Database connection error: {e}")
+        raise
+    finally:
+        if conn:
+            await conn.close()
+
+# Использование:
+async def get_user_alerts(user_id: int):
+    async with get_connection() as conn:
+        return await conn.fetch(
+            'SELECT * FROM alerts WHERE user_id = $1 AND is_active = TRUE', 
+            user_id
+        )
