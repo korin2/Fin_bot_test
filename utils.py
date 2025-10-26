@@ -1,5 +1,7 @@
 import logging
-from telegram import InlineKeyboardMarkup
+import json
+from datetime import datetime
+from telegram import InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton
 
 logger = logging.getLogger(__name__)
 
@@ -31,3 +33,49 @@ def create_back_button():
     """Создает кнопку 'Назад в меню'"""
     from telegram import InlineKeyboardButton
     return InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Назад в меню", callback_data='back_to_main')]])
+
+def log_user_action(user_id: int, action: str, details: dict = None):
+    """Логирование действий пользователя"""
+    log_entry = {
+        'timestamp': datetime.now().isoformat(),
+        'user_id': user_id,
+        'action': action,
+        'details': details or {}
+    }
+    logger.info(f"USER_ACTION: {json.dumps(log_entry)}")
+
+def create_main_reply_keyboard():
+    """Создает главное reply-меню"""
+    keyboard = [
+        [
+            KeyboardButton("💱 Курсы валют"), 
+            KeyboardButton("₿ Криптовалюты")
+        ],
+        [
+            KeyboardButton("💎 Ключевая ставка"), 
+            KeyboardButton("🤖 ИИ помощник")
+        ],
+        [
+            KeyboardButton("🔔 Мои уведомления"), 
+            KeyboardButton("🌤️ Погода")
+        ],
+        [
+            KeyboardButton("🔧 Другие функции"), 
+            KeyboardButton("❓ Помощь")
+        ]
+    ]
+    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True, persistent=True)
+
+def create_other_functions_keyboard():
+    """Создает клавиатуру для раздела 'Другие функции'"""
+    keyboard = [
+        [
+            KeyboardButton("📊 Статистика"), 
+            KeyboardButton("⚙️ Настройки")
+        ],
+        [
+            KeyboardButton("ℹ️ О боте"), 
+            KeyboardButton("🔙 Главное меню")
+        ]
+    ]
+    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True, persistent=True)
