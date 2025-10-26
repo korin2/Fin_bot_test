@@ -1,4 +1,3 @@
-
 """
 Health check script for monitoring bot status
 """
@@ -7,6 +6,7 @@ import os
 import sys
 import logging
 from datetime import datetime
+import asyncio
 
 # Настройка логирования
 logging.basicConfig(
@@ -50,8 +50,8 @@ def check_bot_health():
         logger.error(f"❌ Unexpected error: {e}")
         return False
 
-def check_database_connection():
-    """Проверяет подключение к базе данных"""
+async def check_database_connection_async():
+    """Асинхронная проверка подключения к базе данных"""
     try:
         database_url = os.getenv('DATABASE_URL')
         if not database_url:
@@ -59,18 +59,13 @@ def check_database_connection():
             return True  # Не критично для базовой проверки
         
         import asyncpg
-        import asyncio
         
-        async def test_connection():
-            conn = await asyncpg.connect(database_url)
-            # Простой запрос для проверки
-            result = await conn.fetchval('SELECT 1')
-            await conn.close()
-            return result == 1
+        conn = await asyncpg.connect(database_url)
+        # Простой запрос для проверки
+        result = await conn.fetchval('SELECT 1')
+        await conn.close()
         
-        # Запускаем асинхронную проверку
-        result = asyncio.run(test_connection())
-        if result:
+        if result == 1:
             logger.info("✅ Database connection is healthy")
             return True
         else:
@@ -79,6 +74,15 @@ def check_database_connection():
             
     except Exception as e:
         logger.error(f"❌ Database connection failed: {e}")
+        return False
+
+def check_database_connection():
+    """Синхронная обертка для проверки подключения к базе данных"""
+    try:
+        # Запускаем асинхронную функцию в event loop
+        return asyncio.run(check_database_connection_async())
+    except Exception as e:
+        logger.error(f"❌ Database connection check failed: {e}")
         return False
 
 def check_apis():
