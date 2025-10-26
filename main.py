@@ -9,7 +9,7 @@ from handlers import (
     handle_ai_message, alert_command, myalerts_command, show_key_rate, 
     show_crypto_rates, show_ai_chat, show_other_functions, show_bot_stats, 
     show_bot_about, show_settings, show_weather, handle_text_messages,
-    logs_command, clear_logs_command, status_command  # ДОБАВЬТЕ ЭТИ ИМПОРТЫ
+    logs_command, clear_logs_command, status_command, myid_command 
 )
 from jobs import setup_jobs
 
