@@ -49,6 +49,33 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         logger.error(f"Ошибка в команде /start: {e}")
         await update.message.reply_text("❌ Произошла ошибка при запуске бота.")
 
+async def stop_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Обработчик команды /stop - прощание с пользователем"""
+    try:
+        user = update.effective_user
+        user_name = user.first_name or "пользователь"
+        
+        # Логируем выход пользователя
+        log_user_action(user.id, "stop_command")
+        
+        stop_message = (
+            f"👋 До свидания, {user_name}!\n\n"
+            f"Бот завершил работу для вас.\n"
+            f"Все ваши данные сохранены.\n\n"
+            f"💡 Чтобы снова начать работу, используйте команду:\n"
+            f"<code>/start</code>\n\n"
+            f"📊 Ваши активные уведомления сохранены и будут проверяться.\n"
+            f"🔔 Вы продолжите получать уведомления, если они сработают."
+        )
+        
+        # Отправляем прощальное сообщение без клавиатуры
+        await update.message.reply_text(stop_message, parse_mode='HTML')
+        
+    except Exception as e:
+        logger.error(f"Ошибка в команде /stop: {e}")
+        await update.message.reply_text("❌ Произошла ошибка при завершении работы.")
+
+# Также обновите функцию help_command - добавьте /stop в справку
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Обработчик команды /help"""
     from config import ADMIN_IDS
@@ -57,6 +84,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 📚 **Доступные команды:**
 
 /start - Главное меню
+/stop - Завершить работу с ботом
 /rates - Курсы валют ЦБ РФ
 /crypto - Курсы криптовалют  
 /keyrate - Ключевая ставка ЦБ РФ
