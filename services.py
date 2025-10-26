@@ -127,28 +127,32 @@ def format_currency_rates_message(rates_today: dict, date_today: str,
             
             message += "\n"
     
-    # Другие валюты
-    other_currencies = [curr for curr in rates_today.keys() if curr not in main_currencies]
+    # Другие валюты - AED будет первым в списке
+    other_currencies = ['AED']  # Сначала AED
+    other_currencies.extend([curr for curr in rates_today.keys() 
+                           if curr not in main_currencies and curr != 'AED'])  # Затем остальные кроме AED
+    
     if other_currencies:
         message += "🌍 <b>Другие валюты:</b>\n"
         
         for currency in other_currencies:
-            data = rates_today[currency]
-            
-            # Для JPY показываем за 100 единиц
-            if currency == 'JPY':
-                display_value = data['value'] * 100
-                currency_text = f"   {data['name']} ({currency}): <b>{display_value:.2f} руб.</b>"
-            else:
-                currency_text = f"   {data['name']} ({currency}): <b>{data['value']:.2f} руб.</b>"
-            
-            # Добавляем индикатор изменения для завтра, если есть
-            if rates_tomorrow and currency in rates_tomorrow and currency in changes:
-                change_info = changes[currency]
-                change_icon = "📈" if change_info['change'] > 0 else "📉" if change_info['change'] < 0 else "➡️"
-                currency_text += f" {change_icon}"
-            
-            message += currency_text + "\n"
+            if currency in rates_today:  # Проверяем наличие валюты
+                data = rates_today[currency]
+                
+                # Для JPY показываем за 100 единиц
+                if currency == 'JPY':
+                    display_value = data['value'] * 100
+                    currency_text = f"   {data['name']} ({currency}): <b>{display_value:.2f} руб.</b>"
+                else:
+                    currency_text = f"   {data['name']} ({currency}): <b>{data['value']:.2f} руб.</b>"
+                
+                # Добавляем индикатор изменения для завтра, если есть
+                if rates_tomorrow and currency in rates_tomorrow and currency in changes:
+                    change_info = changes[currency]
+                    change_icon = "📈" if change_info['change'] > 0 else "📉" if change_info['change'] < 0 else "➡️"
+                    currency_text += f" {change_icon}"
+                
+                message += currency_text + "\n"
     
     # Информация о доступности завтрашних курсов
     if rates_tomorrow:
