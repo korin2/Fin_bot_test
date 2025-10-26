@@ -570,12 +570,12 @@ async def myalerts_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         alerts = await get_user_alerts(user_id)
         
         if not alerts:
-            message = "📭 <b>У вас нет активных уведомлений.</b>\n\n"
-            message += "💡 Используйте команду:\n"
-            message += "<code>/alert USD RUB 80 above</code>\n"
-            message += "чтобы создать уведомление, когда курс USD превысит 80 рублей"
+            message = (
+                "📭 <b>У вас нет активных уведомлений.</b>\n\n"
+                "💡 Нажмите <b>💱 Создать уведомление</b> чтобы добавить первое уведомление!"
+            )
             
-            await update.message.reply_text(message, parse_mode='HTML', reply_markup=create_main_reply_keyboard())
+            await update.message.reply_text(message, parse_mode='HTML', reply_markup=create_alerts_keyboard())
             return
         
         message = "🔔 <b>ВАШИ АКТИВНЫЕ УВЕДОМЛЕНИЯ</b>\n\n"
@@ -592,15 +592,20 @@ async def myalerts_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             if rates_today and from_curr in rates_today:
                 current_rate = f"{rates_today[from_curr]['value']:.2f}"
             
+            direction_display = 'выше' if direction == 'above' else 'ниже'
+            status_icon = "🟢" if alert.get('is_active', True) else "🔴"
+            
             message += (
-                f"{i}. <b>{from_curr} → {to_curr}</b>\n"
+                f"{status_icon} <b>{i}. {from_curr} → {to_curr}</b>\n"
                 f"   🎯 Порог: <b>{threshold} руб.</b>\n"
-                f"   📊 Условие: курс <b>{'выше' if direction == 'above' else 'ниже'}</b> {threshold} руб.\n"
+                f"   📊 Условие: курс <b>{direction_display}</b> {threshold} руб.\n"
                 f"   💱 Текущий курс: <b>{current_rate} руб.</b>\n\n"
             )
         
-        message += "⏰ <i>Уведомления проверяются каждые 30 минут автоматически</i>\n"
-        message += "💡 <i>При срабатывании уведомление автоматически удаляется</i>"
+        message += (
+            "⏰ <i>Уведомления проверяются каждые 30 минут автоматически</i>\n"
+            "💡 <i>При срабатывании уведомление автоматически удаляется</i>"
+        )
         
         reply_markup = create_alerts_keyboard()
         
@@ -609,7 +614,7 @@ async def myalerts_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     except Exception as e:
         logger.error(f"Ошибка в команде /myalerts: {e}")
         error_message = "❌ <b>Ошибка при получении уведомлений.</b>"
-        await update.message.reply_text(error_message, parse_mode='HTML', reply_markup=create_main_reply_keyboard())
+        await update.message.reply_text(error_message, parse_mode='HTML', reply_markup=create_alerts_keyboard())
 
 async def show_weather(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Показывает текущую погоду в Москве"""
