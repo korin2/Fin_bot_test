@@ -33,7 +33,7 @@ SUPPORTED_CURRENCIES = ['USD', 'EUR', 'GBP', 'JPY', 'CNY', 'CHF', 'CAD', 'AUD', 
 # Настройки погоды
 WEATHER_CITY = "Moscow"
 
-# 
+# Безопасность и конфигурация
 class Config:
     def __init__(self):
         self.TOKEN = self._get_env('TELEGRAM_BOT_TOKEN')
