@@ -60,6 +60,8 @@ def main():
         application.add_handler(CommandHandler("clearlogs", clear_logs_command))
         application.add_handler(CommandHandler("status", status_command))
         application.add_handler(CommandHandler("myid", myid_command))
+
+        application.add_handler(CommandHandler("testweather", test_weather_now))
    
         # Обработчики кнопок и сообщений
         application.add_handler(CallbackQueryHandler(button_handler))
