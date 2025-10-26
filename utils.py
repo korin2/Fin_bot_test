@@ -56,7 +56,7 @@ def create_main_reply_keyboard():
             KeyboardButton("🤖 ИИ помощник")
         ],
         [
-            KeyboardButton("🔔 Уведомления"), 
+            KeyboardButton("🔔 Уведомления"),  # Обновленная кнопка
             KeyboardButton("🌤️ Погода")
         ],
         [
