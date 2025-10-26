@@ -585,16 +585,12 @@ async def ask_deepseek(prompt: str, context: ContextTypes.DEFAULT_TYPE = None) -
     if not DEEPSEEK_API_KEY:
         return "❌ Функционал ИИ временно недоступен. Отсутствует API ключ."
     
-    max_retries = 3
-    retry_delay = 5  # секунды
-    
-    for attempt in range(max_retries):
-        try:
-            url = f"{DEEPSEEK_API_BASE}chat/completions"
-            
-            headers = {
-                'Content-Type': 'application/json',
-                'Authorization': f'Bearer {DEEPSEEK_API_KEY}'
+    try:
+        url = f"{DEEPSEEK_API_BASE}chat/completions"
+        
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f'Bearer {DEEPSEEK_API_KEY}'
         }
         
         # УНИВЕРСАЛЬНЫЙ ПРОМПТ ДЛЯ ЛЮБЫХ ВОПРОСОВ
@@ -609,7 +605,7 @@ async def ask_deepseek(prompt: str, context: ContextTypes.DEFAULT_TYPE = None) -
 - 🔧 Советы: решение проблем, рекомендации
 - 💬 Общение: поддержка, мотивация
 
-Отвечай подробно, информативно и помогающе. Будь дружелюбным и поддерживающим собеседником. Можешь шутить. Иногда напоминать про создателя бота Санька"""
+Отвечай подробно, информативно и помогающе. Будь дружелюбным и поддерживающим собеседником.Можешь шутить. Иногда напоминать про создателя бота Санька"""
         
         data = {
             "model": "deepseek-chat",
@@ -618,18 +614,19 @@ async def ask_deepseek(prompt: str, context: ContextTypes.DEFAULT_TYPE = None) -
                 {"role": "user", "content": prompt}
             ],
             "temperature": 0.7,
-            "max_tokens": 2000,  # Увеличим лимит токенов для более подробных ответов
+            "max_tokens": 2000,
             "stream": False
         }
         
-        logger.info(f"Попытка {attempt + 1}/{max_retries}: Отправка запроса к DeepSeek API: {prompt[:100]}...")
-        # Увеличиваем таймаут и добавляем retry в (timeout=60) 
+        logger.info(f"Отправка запроса к DeepSeek API: {prompt[:100]}...")
+        
+        # Увеличиваем таймаут до 60 секунд
         response = requests.post(url, headers=headers, json=data, timeout=60)
         
         if response.status_code == 200:
             result = response.json()
             answer = result['choices'][0]['message']['content']
-            logger.info(f"Успешно получен ответ от DeepSeek API (попытка {attempt + 1})")
+            logger.info("Успешно получен ответ от DeepSeek API")
             return answer
         elif response.status_code == 402:
             logger.error("Недостаточно средств на счету DeepSeek API")
@@ -643,38 +640,18 @@ async def ask_deepseek(prompt: str, context: ContextTypes.DEFAULT_TYPE = None) -
         else:
             error_msg = f"Ошибка API DeepSeek: {response.status_code} - {response.text}"
             logger.error(error_msg)
-                if attempt < max_retries - 1:
-                    logger.info(f"Повторная попытка через {retry_delay} секунд...")
-                    import time
-                    time.sleep(retry_delay)
-                    continue
-                return f"❌ Временная ошибка сервиса ИИ. Попробуйте позже."
+            return f"❌ Временная ошибка сервиса ИИ. Попробуйте позже."
             
-        except requests.exceptions.Timeout:
-            logger.error(f"Таймаут при запросе к DeepSeek API (попытка {attempt + 1})")
-            if attempt < max_retries - 1:
-                logger.info(f"Повторная попытка через {retry_delay} секунд...")
-                import time
-                time.sleep(retry_delay)
-                continue
-            return "⏰ ИИ не успел обработать запрос. Попробуйте позже или задайте более короткий вопрос."
-except requests.exceptions.RequestException as e:
-            logger.error(f"Сетевая ошибка при запросе к DeepSeek API (попытка {attempt + 1}): {e}")
-            if attempt < max_retries - 1:
-                logger.info(f"Повторная попытка через {retry_delay} секунд...")
-                import time
-                time.sleep(retry_delay)
-                continue
-            return "❌ Произошла сетевая ошибка. Проверьте подключение к интернету."
-        except Exception as e:
-            logger.error(f"Неожиданная ошибка при работе с DeepSeek API (попытка {attempt + 1}): {e}")
-            if attempt < max_retries - 1:
-                logger.info(f"Повторная попытка через {retry_delay} секунд...")
-                import time
-                time.sleep(retry_delay)
-                continue
-            return "❌ Произошла непредвиденная ошибка. Попробуйте позже."
-    return "❌ Не удалось получить ответ от ИИ после нескольких попыток. Попробуйте позже."
+    except requests.exceptions.Timeout:
+        logger.error("Таймаут при запросе к DeepSeek API")
+        return "⏰ ИИ не успел обработать запрос. Попробуйте позже."
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Сетевая ошибка при запросе к DeepSeek API: {e}")
+        return "❌ Произошла сетевая ошибка. Проверьте подключение к интернету."
+    except Exception as e:
+        logger.error(f"Неожиданная ошибка при работе с DeepSeek API: {e}")
+        return "❌ Произошла непредвиденная ошибка. Попробуйте позже."
+        
 # Добавьте в конец services.py
 async def check_alerts(context: ContextTypes.DEFAULT_TYPE):
     """Проверяет активные уведомления и отправляет уведомления при срабатывании"""
