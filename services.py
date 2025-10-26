@@ -1094,7 +1094,10 @@ def format_weather_message(weather_data):
     else:
         message += "✅ <i>Актуальные данные от OpenWeatherMap</i>\n"
     
-    message += f"🕒 <i>Обновлено: {datetime.now().strftime('%d.%m.%Y %H:%M')}</i>"
+    # Исправляем время на московское (UTC+3)
+    from datetime import timezone, timedelta
+    moscow_tz = timezone(timedelta(hours=3))
+    message += f"🕒 <i>Обновлено: {datetime.now(moscow_tz).strftime('%d.%m.%Y %H:%M')} (МСК)</i>"
     
     return message
 
