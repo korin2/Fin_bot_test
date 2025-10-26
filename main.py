@@ -38,7 +38,7 @@ def main():
         application.add_handler(CommandHandler("logs", logs_command))  # КОМАНДА ЛОГОВ
         application.add_handler(CommandHandler("clearlogs", clear_logs_command))  # ОЧИСТКА ЛОГОВ
         application.add_handler(CommandHandler("status", status_command))  # СТАТУС СИСТЕМЫ
-        
+        application.add_handler(CommandHandler("myid", myid_command))
         # Обработчики кнопок и сообщений
         application.add_handler(CallbackQueryHandler(button_handler))
         application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_messages))
