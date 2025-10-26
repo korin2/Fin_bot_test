@@ -46,7 +46,7 @@ DEEPSEEK_API_BASE = "https://api.deepseek.com/v1/"
 OPENWEATHER_API_BASE = "http://api.openweathermap.org/data/2.5/"
 
 # Поддерживаемые валюты
-SUPPORTED_CURRENCIES = ['USD', 'EUR', 'GBP', 'JPY', 'CNY', 'CHF', 'CAD', 'AUD', 'TRY', 'KZT']
+SUPPORTED_CURRENCIES = ['USD', 'EUR', 'GBP', 'JPY', 'CNY', 'CHF', 'CAD', 'AUD', 'TRY', 'KZT', 'AED']
 
 # Настройки погоды
 WEATHER_CITY = "Moscow"
