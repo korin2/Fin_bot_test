@@ -18,7 +18,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         user = update.effective_user
         await update_user_info(user.id, user.first_name, user.username)
         
-        greeting = f"Привет, {user.first_name}!" if user.first_name else "Привет!"
+        greeting = f"Привет, {user.first_name}!\n" if user.first_name else "Привет!\n"
         
         # Логируем запуск бота
         log_user_action(user.id, "start_bot")
@@ -28,7 +28,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         ai_available = not (test_ai.startswith("❌") or test_ai.startswith("⏰"))
         
         start_message = (
-            f'{greeting}\n Я бот для отслеживания финансовых данных и не только!\n\n'
+            f'{greeting} Я бот для отслеживания финансовых данных и не только!\n\n'
             '💡 <b>Основные возможности:</b>\n'
             '• 💱 Курсы валют ЦБ РФ с прогнозом\n'
             '• ₿ Криптовалюты в реальном времени\n'
