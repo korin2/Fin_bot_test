@@ -120,6 +120,8 @@ async def main_async():
         application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_messages))
         
         # Обработчик статуса проверки бота
+        application.add_handler(CommandHandler("logs", logs_command))
+        application.add_handler(CommandHandler("clearlogs", clear_logs_command))
         application.add_handler(CommandHandler("status", status_command))
 
         # Настройка фоновых задач
