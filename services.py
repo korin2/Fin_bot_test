@@ -1119,7 +1119,13 @@ async def send_daily_weather(context: ContextTypes.DEFAULT_TYPE):
         weather_data = get_weather_moscow()
         message = format_weather_message(weather_data)
         
-        # Добавляем заголовок для рассылки
+        # Добавляем заголовок для рассылки с московским временем
+        from datetime import timezone, timedelta
+        moscow_tz = timezone(timedelta(hours=3))
+        current_time = datetime.now(moscow_tz).strftime('%d.%m.%Y %H:%M')
+        
+        full_message = f"🌅 <b>ЕЖЕДНЕВНАЯ РАССЫЛКА ПОГОДЫ</b>\n<i>Время отправки: {current_time} (МСК)</i>\n\n{message}"
+        
         full_message = f"🌅 <b>ЕЖЕДНЕВНАЯ РАССЫЛКА ПОГОДЫ</b>\n\n{message}"
         
         logger.info("📨 [РАССЫЛКА ПОГОДЫ] Начинаем отправку сообщений...")
