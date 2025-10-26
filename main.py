@@ -11,7 +11,6 @@ from handlers import start, help_command, button_handler, show_currency_rates
 from handlers import handle_ai_message, alert_command, myalerts_command, show_key_rate, show_crypto_rates, show_ai_chat
 from handlers import show_other_functions, show_bot_stats, show_bot_about, show_settings, show_weather, handle_text_messages
 from jobs import setup_jobs
-from railway_config import setup_railway_webhook
 
 # Глобальная переменная для отслеживания состояния
 bot_running = False
@@ -49,12 +48,17 @@ async def run_polling_safe(application):
         try:
             logger.info(f"Попытка запуска polling (попытка {retry_count + 1}/{max_retries})")
             
+            # Инициализируем приложение
+            await application.initialize()
+            
             # Останавливаем любые предыдущие обновления
             await application.bot.delete_webhook(drop_pending_updates=True)
             
-            # Запускаем polling
-            bot_running = True
+            # Запускаем приложение
             await application.start()
+            bot_running = True
+            
+            # Запускаем polling
             await application.updater.start_polling(
                 drop_pending_updates=True,
                 allowed_updates=['message', 'callback_query']
@@ -81,17 +85,19 @@ async def run_polling_safe(application):
             
         except Exception as e:
             logger.error(f"Неожиданная ошибка при запуске polling: {e}")
+            # Пытаемся корректно завершить приложение
+            try:
+                await application.stop()
+                await application.shutdown()
+            except:
+                pass
             return False
     
     return False
 
-def main():
-    """Основная функция запуска бота"""
+async def main_async():
+    """Асинхронная основная функция"""
     global bot_running
-    
-    # Регистрируем обработчики сигналов
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
     
     try:
         # Создаем приложение
@@ -116,40 +122,34 @@ def main():
         # Настройка фоновых задач
         try:
             setup_jobs(application)
+            logger.info("Фоновые задачи настроены")
         except Exception as e:
             logger.warning(f"JobQueue не настроен: {e}")
 
         logger.info("Запуск бота...")
         
-        # Пытаемся использовать Webhook на Railway
-        if os.getenv('RAILWAY_ENVIRONMENT'):
-            logger.info("Обнаружена среда Railway, пробуем Webhook...")
-            if setup_railway_webhook(application, TOKEN):
-                logger.info("Webhook успешно настроен")
-                return
-        
-        # Если Webhook не сработал, используем polling
+        # Используем polling (Webhook сложно настроить на Railway без домена)
         logger.info("Используем polling...")
         
-        # Запускаем event loop
-        loop = asyncio.get_event_loop()
-        
         # Запускаем polling
-        success = loop.run_until_complete(run_polling_safe(application))
+        success = await run_polling_safe(application)
         
         if success:
             logger.info("Бот успешно запущен и работает")
             
             # Бесконечный цикл работы
             try:
-                loop.run_forever()
+                while bot_running:
+                    await asyncio.sleep(1)
             except KeyboardInterrupt:
                 logger.info("Получен сигнал KeyboardInterrupt")
             finally:
-                loop.run_until_complete(shutdown(application))
+                await shutdown(application)
         else:
             logger.error("Не удалось запустить бота после нескольких попыток")
-            sys.exit(1)
+            return 1
+        
+        return 0
         
     except Conflict as e:
         logger.error(f"Критический конфликт: {e}")
@@ -158,11 +158,28 @@ def main():
         print("   1. Перейдите в панель Railway")
         print("   2. Нажмите 'Restart' для вашего сервиса")
         print("   3. Убедитесь, что запущен только один экземпляр")
-        sys.exit(1)
+        return 1
         
     except Exception as e:
         logger.error(f"Критическая ошибка при запуске бота: {e}")
         print(f"❌ Критическая ошибка: {e}")
+        return 1
+
+def main():
+    """Основная функция запуска бота"""
+    # Регистрируем обработчики сигналов
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+    
+    # Запускаем асинхронную основную функцию
+    try:
+        exit_code = asyncio.run(main_async())
+        sys.exit(exit_code)
+    except KeyboardInterrupt:
+        logger.info("Бот завершен пользователем")
+        sys.exit(0)
+    except Exception as e:
+        logger.error(f"Ошибка в главной функции: {e}")
         sys.exit(1)
 
 if __name__ == '__main__':
