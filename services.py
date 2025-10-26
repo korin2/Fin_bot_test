@@ -699,17 +699,26 @@ async def check_alerts(context: ContextTypes.DEFAULT_TYPE):
 async def send_daily_rates(context: ContextTypes.DEFAULT_TYPE):
     """Ежедневная рассылка основных финансовых данных"""
     try:
-        from db import get_all_users
+        logger.info("🔄 [РАССЫЛКА КУРСОВ] Функция запущена")
         
+        from db import get_all_users
         users = await get_all_users()
+        logger.info(f"📊 [РАССЫЛКА КУРСОВ] Получено пользователей: {len(users)}")
+        
         if not users:
+            logger.warning("⚠️ [РАССЫЛКА КУРСОВ] Нет пользователей для рассылки")
             return
         
         # Формируем сводное сообщение
+        logger.info("💱 [РАССЫЛКА КУРСОВ] Получаем данные о курсах валют...")
+        rates_today, date_today, _, _ = get_currency_rates_with_tomorrow()
+        
+        logger.info("💎 [РАССЫЛКА КУРСОВ] Получаем ключевую ставку...")
+        key_rate_data = get_key_rate()
+        
         message = "🌅 <b>ЕЖЕДНЕВНАЯ ФИНАНСОВАЯ СВОДКА</b>\n\n"
         
         # Добавляем курсы валют
-        rates_today, date_today, _, _ = get_currency_rates_with_tomorrow()
         if rates_today:
             message += "💱 <b>Основные курсы ЦБ РФ:</b>\n"
             for currency in ['USD', 'EUR']:
@@ -719,13 +728,16 @@ async def send_daily_rates(context: ContextTypes.DEFAULT_TYPE):
             message += "\n"
         
         # Добавляем ключевую ставку
-        key_rate_data = get_key_rate()
         if key_rate_data:
             message += f"💎 <b>Ключевая ставка:</b> {key_rate_data['rate']:.2f}%\n\n"
         
         message += "💡 Используйте команды бота для подробной информации"
         
+        logger.info(f"📝 [РАССЫЛКА КУРСОВ] Сообщение сформировано: {len(message)} символов")
+        logger.info("📨 [РАССЫЛКА КУРСОВ] Начинаем отправку сообщений...")
+        
         # Отправляем всем пользователям
+        success_count = 0
         for user in users:
             try:
                 await context.bot.send_message(
@@ -733,11 +745,15 @@ async def send_daily_rates(context: ContextTypes.DEFAULT_TYPE):
                     text=message,
                     parse_mode='HTML'
                 )
+                success_count += 1
+                logger.info(f"✅ [РАССЫЛКА КУРСОВ] Отправлено пользователю {user['user_id']}")
             except Exception as e:
-                logger.error(f"Ошибка отправки рассылки пользователю {user['user_id']}: {e}")
+                logger.error(f"❌ [РАССЫЛКА КУРСОВ] Ошибка отправки пользователю {user['user_id']}: {e}")
+        
+        logger.info(f"🎉 [РАССЫЛКА КУРСОВ] Рассылка завершена. Успешно: {success_count}/{len(users)}")
                 
     except Exception as e:
-        logger.error(f"Ошибка при ежедневной рассылке: {e}")
+        logger.error(f"💥 [РАССЫЛКА КУРСОВ] Критическая ошибка: {e}")
 
 async def check_alerts(context: ContextTypes.DEFAULT_TYPE):
     """Проверяет активные уведомления и отправляет уведомления при срабатывании"""
