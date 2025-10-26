@@ -10,6 +10,8 @@ def setup_jobs(application):
         job_queue = application.job_queue
         
         if job_queue:
+            logger.info("🔧 JobQueue доступен, настраиваем задачи...")
+            
             # Ежедневная рассылка курсов валют в 10:00 (07:00 UTC)
             job_queue.run_daily(
                 send_daily_rates,
@@ -19,21 +21,23 @@ def setup_jobs(application):
             )
             
             # Ежедневная рассылка погоды в 08:00 (05:00 UTC)
-            # Временно для теста - запустить через 1 минуту после старта бота
-            job_queue.run_once(send_daily_weather, when=60, name="test_weather"
-           # job_queue.run_daily(
-              #  send_daily_weather,
-              #  time=datetime.strptime("16:27", "%H:%M").time(),
-              #  days=(0, 1, 2, 3, 4, 5, 6),
-             #   name="daily_weather"
+            job_queue.run_daily(
+                send_daily_weather,
+                time=datetime.strptime("05:00", "%H:%M").time(),
+                days=(0, 1, 2, 3, 4, 5, 6),
+                name="daily_weather"
             )
             
             # Проверка уведомлений каждые 30 минут
             job_queue.run_repeating(check_alerts, interval=1800, first=10, name="check_alerts")
             
-            logger.info("Фоновые задачи настроены")
+            logger.info("✅ Фоновые задачи настроены")
+            logger.info("   📅 Ежедневная рассылка курсов: 10:00 МСК (07:00 UTC)")
+            logger.info("   🌤️ Ежедневная рассылка погоды: 08:00 МСК (05:00 UTC)")
+            logger.info("   🔔 Проверка уведомлений: каждые 30 минут")
+            
         else:
-            logger.warning("JobQueue не доступен - фоновые задачи отключены")
+            logger.warning("❌ JobQueue не доступен - фоновые задачи отключены")
             
     except Exception as e:
         logger.error(f"Ошибка при настройке фоновых задач: {e}")
