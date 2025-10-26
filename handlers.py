@@ -62,6 +62,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 /alert - Создать уведомление
 /weather - Погода в Москве
 /status - Статус системы
+/myid - твой Telegram ID
 /help - Эта справка
 
 👑 **Команды администратора:**
