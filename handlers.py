@@ -51,6 +51,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Обработчик команды /help"""
+    from config import ADMIN_IDS
+    
     help_text = """
 📚 **Доступные команды:**
 
@@ -63,13 +65,19 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 /alert - Создать уведомление
 /weather - Погода в Москве
 /status - Статус системы
-/myid - твой Telegram ID
 /help - Эта справка
+/myid - Показать мой ID
+"""
 
+    # Добавляем команды администратора только если пользователь админ
+    if update.effective_user.id in ADMIN_IDS:
+        help_text += """
 👑 **Команды администратора:**
 /logs - Показать логи бота
 /clearlogs - Очистить логи
+"""
 
+    help_text += """
 💡 **Пример уведомления:**
 /alert USD RUB 80 above - уведомит когда USD превысит 80 руб.
 
@@ -78,6 +86,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 👇 **Или используйте кнопки меню ниже!**
 """
+    
     reply_markup = create_main_reply_keyboard()
     await update.message.reply_text(help_text, parse_mode='Markdown', reply_markup=reply_markup)
 
