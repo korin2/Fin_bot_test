@@ -12,18 +12,18 @@ def setup_jobs(application):
         if job_queue:
             logger.info("🔧 JobQueue доступен, настраиваем задачи...")
             
-            # Ежедневная рассылка курсов валют в 10:00 (07:00 UTC)
+            # Ежедневная рассылка курсов валют в 13:00 (10:00 UTC)
             job_queue.run_daily(
                 send_daily_rates,
-                time=datetime.strptime("07:00", "%H:%M").time(),
+                time=datetime.strptime("10:00", "%H:%M").time(),
                 days=(0, 1, 2, 3, 4, 5, 6),
                 name="daily_rates"
             )
             
-            # Ежедневная рассылка погоды в 08:00 (05:00 UTC)
+            # Ежедневная рассылка погоды в 10:00 (07:00 UTC)
             job_queue.run_daily(
                 send_daily_weather,
-                time=datetime.strptime("05:00", "%H:%M").time(),
+                time=datetime.strptime("07:00", "%H:%M").time(),
                 days=(0, 1, 2, 3, 4, 5, 6),
                 name="daily_weather"
             )
