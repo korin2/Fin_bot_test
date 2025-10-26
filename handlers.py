@@ -762,3 +762,61 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     except Exception as e:
         logger.error(f"Ошибка в обработчике кнопок: {e}")
+
+# команда проверки статуса
+async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Показывает статус бота и системную информацию"""
+    try:
+        import psutil
+        import platform
+        from datetime import datetime
+        
+        # Системная информация
+        system_info = f"🖥️ <b>Системная информация</b>\n"
+        system_info += f"• OS: {platform.system()} {platform.release()}\n"
+        system_info += f"• Python: {platform.python_version()}\n"
+        system_info += f"• CPU: {psutil.cpu_percent()}%\n"
+        system_info += f"• Memory: {psutil.virtual_memory().percent}%\n"
+        system_info += f"• Disk: {psutil.disk_usage('/').percent}%\n\n"
+        
+        # Информация о боте
+        bot_info = f"🤖 <b>Информация о боте</b>\n"
+        bot_info += f"• Версия: 1.0.0\n"
+        bot_info += f"• Запущен: {datetime.now().strftime('%d.%m.%Y %H:%M')}\n"
+        bot_info += f"• Пользователей: {len(await get_all_users())}\n"
+        bot_info += f"• Уведомлений: {len(await get_all_alerts())}\n\n"
+        
+        # Статус сервисов
+        services_info = f"🔧 <b>Статус сервисов</b>\n"
+        
+        # Проверка ЦБ РФ
+        try:
+            rates, _ = get_currency_rates_for_date(datetime.now().strftime('%d/%m/%Y'))
+            services_info += "• ЦБ РФ: ✅ Работает\n"
+        except:
+            services_info += "• ЦБ РФ: ❌ Ошибка\n"
+            
+        # Проверка CoinGecko
+        try:
+            crypto_data = get_crypto_rates()
+            services_info += "• CoinGecko: ✅ Работает\n" if crypto_data else "• CoinGecko: ❌ Ошибка\n"
+        except:
+            services_info += "• CoinGecko: ❌ Ошибка\n"
+            
+        # Проверка DeepSeek
+        services_info += f"• DeepSeek AI: {'✅ Доступен' if DEEPSEEK_API_KEY else '❌ Не настроен'}\n"
+        
+        # Проверка погоды
+        services_info += f"• Погода: {'✅ Настроена' if WEATHER_API_KEY else '⚠️ Демо-данные'}\n"
+        
+        full_message = system_info + bot_info + services_info
+        full_message += f"\n💡 <i>Бот работает стабильно</i>"
+        
+        await update.message.reply_text(full_message, parse_mode='HTML', reply_markup=create_main_reply_keyboard())
+        
+    except Exception as e:
+        logger.error(f"Ошибка в команде status: {e}")
+        await update.message.reply_text(
+            "❌ Ошибка при получении статуса системы",
+            reply_markup=create_main_reply_keyboard()
+        )
