@@ -7,7 +7,7 @@ from services import (
     get_key_rate, format_key_rate_message, get_crypto_rates, 
     get_crypto_rates_fallback, format_crypto_rates_message, ask_deepseek
 )
-from utils import split_long_message, create_back_button, log_user_action, create_main_reply_keyboard, create_other_functions_keyboard
+from utils import split_long_message, create_back_button, log_user_action, create_main_reply_keyboard, create_other_functions_keyboard, create_ai_keyboard, create_alerts_keyboard
 from db import get_user_alerts, clear_user_alerts, remove_alert, add_alert, update_user_info
 from services import get_weather_moscow, format_weather_message
 
@@ -180,11 +180,7 @@ async def show_ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             "<i>Для выхода из режима ИИ используйте кнопку 'Главное меню'</i>"
         )
         
-        keyboard = [
-            [KeyboardButton("💡 Примеры вопросов")],
-            [KeyboardButton("🔙 Главное меню")]
-        ]
-        reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True, persistent=True)
+        reply_markup = create_ai_keyboard()
         
         await update.message.reply_text(welcome_message, parse_mode='HTML', reply_markup=reply_markup)
             
@@ -399,7 +395,7 @@ async def handle_ai_message(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             [KeyboardButton("🔄 Новый вопрос")],
             [KeyboardButton("🔙 Главное меню")]
         ]
-        reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True, persistent=True)
+        reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
         
         await update.message.reply_text(
             f"🤖 <b>ИИ Ассистент:</b>\n\n{first_part}",
@@ -561,12 +557,7 @@ async def myalerts_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         message += "⏰ <i>Уведомления проверяются каждые 30 минут автоматически</i>\n"
         message += "💡 <i>При срабатывании уведомление автоматически удаляется</i>"
         
-        keyboard = [
-            [KeyboardButton("🗑 Очистить все уведомления")],
-            [KeyboardButton("💱 Создать уведомление")],
-            [KeyboardButton("🔙 Главное меню")]
-        ]
-        reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True, persistent=True)
+        reply_markup = create_alerts_keyboard()
         
         await update.message.reply_text(message, parse_mode='HTML', reply_markup=reply_markup)
         
