@@ -4,7 +4,7 @@ from config import TOKEN, logger
 from db import init_db
 from handlers import start, help_command, button_handler, show_currency_rates
 from handlers import handle_ai_message, alert_command, myalerts_command, show_key_rate, show_crypto_rates, show_ai_chat
-from handlers import show_other_functions, show_bot_stats, show_bot_about, show_settings, show_weather
+from handlers import show_other_functions, show_bot_stats, show_bot_about, show_settings, show_weather, handle_text_messages
 from jobs import setup_jobs
 
 async def post_init(application):
@@ -30,11 +30,13 @@ def main():
         application.add_handler(CommandHandler("ai", show_ai_chat))
         application.add_handler(CommandHandler("alert", alert_command))
         application.add_handler(CommandHandler("myalerts", myalerts_command))
-        application.add_handler(CommandHandler("weather", show_weather))  # Новая команда!
+        application.add_handler(CommandHandler("weather", show_weather))
         
         # Обработчики кнопок и сообщений
         application.add_handler(CallbackQueryHandler(button_handler))
-        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_ai_message))
+        
+        # Обработчик текстовых сообщений для reply-меню (должен быть после CommandHandler)
+        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_messages))
 
         # Настройка фоновых задач
         setup_jobs(application)
