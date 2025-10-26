@@ -1196,6 +1196,33 @@ async def myid_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         parse_mode='HTML',
         reply_markup=create_main_reply_keyboard()
     )
+async def debug_alerts(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Отладочная команда для проверки состояния уведомлений"""
+    try:
+        user_id = update.effective_user.id
+        user_data = context.user_data
+        
+        debug_info = f"🔧 <b>DEBUG INFO - УВЕДОМЛЕНИЯ</b>\n\n"
+        debug_info += f"👤 User ID: {user_id}\n"
+        debug_info += f"📊 User Data: {user_data}\n"
+        debug_info += f"🔄 Creating Alert: {user_data.get('creating_alert', 'False')}\n"
+        debug_info += f"📝 Alert Stage: {user_data.get('alert_stage', 'None')}\n"
+        debug_info += f"💱 Alert Currency: {user_data.get('alert_currency', 'None')}\n"
+        debug_info += f"📈 Alert Direction: {user_data.get('alert_direction', 'None')}\n\n"
+        
+        # Проверяем существование уведомлений пользователя
+        from db import get_user_alerts
+        alerts = await get_user_alerts(user_id)
+        debug_info += f"🔔 Active Alerts: {len(alerts)}\n"
+        
+        for i, alert in enumerate(alerts, 1):
+            debug_info += f"  {i}. {alert['from_currency']} -> {alert['to_currency']} {alert['threshold']} {alert['direction']}\n"
+        
+        await update.message.reply_text(debug_info, parse_mode='HTML')
+        
+    except Exception as e:
+        logger.error(f"Ошибка в debug команде: {e}")
+        await update.message.reply_text(f"❌ Ошибка отладки: {e}")
 
 # Обработчики callback-кнопок (оставлены для обратной совместимости)
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
