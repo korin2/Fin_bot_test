@@ -642,6 +642,40 @@ async def handle_text_messages(update: Update, context: ContextTypes.DEFAULT_TYP
         # Логируем текстовое сообщение
         log_user_action(user_id, "text_message", {"message": user_message})
         
+        # Обработка меню уведомлений
+        if user_message == "🔔 Уведомления":
+            await show_alerts_menu(update, context)
+        elif user_message == "💱 Создать уведомление":
+            await start_create_alert(update, context)
+        elif user_message == "📋 Мои уведомления":
+            await myalerts_command(update, context)
+        elif user_message == "🗑 Очистить все уведомления":
+            user_id = update.effective_user.id
+            await clear_user_alerts(user_id)
+            await update.message.reply_text(
+                "✅ Все уведомления очищены",
+                reply_markup=create_alerts_keyboard()
+            )
+        
+        # Обработка процесса создания уведомления
+        elif context.user_data.get('creating_alert'):
+            alert_stage = context.user_data.get('alert_stage')
+            
+            if alert_stage == 'select_currency':
+                await handle_currency_selection(update, context)
+            elif alert_stage == 'select_direction':
+                await handle_direction_selection(update, context)
+            elif alert_stage == 'enter_threshold':
+                await handle_threshold_input(update, context)
+        
+        # Обработка навигации назад
+        elif any(back_text in user_message for back_text in [
+            "🔙 Назад к уведомлениям", 
+            "🔙 Назад к валютам", 
+            "🔙 Назад к условиям"
+        ]):
+            await handle_alerts_back_navigation(update, context)
+        
         if user_message == "💱 Курсы валют":
             await show_currency_rates(update, context)
         elif user_message == "₿ Криптовалюты":
