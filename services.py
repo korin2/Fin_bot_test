@@ -594,7 +594,7 @@ async def ask_deepseek(prompt: str, context: ContextTypes.DEFAULT_TYPE = None) -
             
             headers = {
                 'Content-Type': 'application/json',
-                'Authorization': f'Bearer {DEEPSEEK_API_KEY}''
+                'Authorization': f'Bearer {DEEPSEEK_API_KEY}'
         }
         
         # УНИВЕРСАЛЬНЫЙ ПРОМПТ ДЛЯ ЛЮБЫХ ВОПРОСОВ
