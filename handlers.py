@@ -706,6 +706,67 @@ async def handle_text_messages(update: Update, context: ContextTypes.DEFAULT_TYP
             reply_markup=create_main_reply_keyboard()
         )
 
+async def logs_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Показывает последние логи (только для администраторов)"""
+    try:
+        # Добавьте проверку администратора здесь
+        # ЗАМЕНИТЕ 661920 на ваш реальный Telegram ID
+        ADMIN_IDS = [661920]  # Ваш ID из логов: user_id=661920
+        
+        if update.effective_user.id not in ADMIN_IDS:
+            await update.message.reply_text("❌ Эта команда только для администраторов")
+            return
+            
+        # Чтение последних логов
+        try:
+            with open('bot.log', 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+                last_lines = lines[-20:]  # Последние 20 строк
+                log_text = ''.join(last_lines)
+        except FileNotFoundError:
+            log_text = "Файл логов не найден"
+        
+        if len(log_text) > 4000:
+            log_text = log_text[-4000:]  # Обрезаем если слишком длинный
+            
+        await update.message.reply_text(
+            f"📋 <b>Последние логи:</b>\n<code>{log_text}</code>",
+            parse_mode='HTML',
+            reply_markup=create_main_reply_keyboard()
+        )
+        
+    except Exception as e:
+        logger.error(f"Ошибка в команде logs: {e}")
+        await update.message.reply_text(
+            "❌ Ошибка при чтении логов",
+            reply_markup=create_main_reply_keyboard()
+        )
+
+# Также добавьте команду для очистки логов (опционально)
+async def clear_logs_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Очищает логи (только для администраторов)"""
+    try:
+        ADMIN_IDS = [661920]  # ЗАМЕНИТЕ на ваш ID
+        
+        if update.effective_user.id not in ADMIN_IDS:
+            await update.message.reply_text("❌ Эта команда только для администраторов")
+            return
+            
+        # Очистка файла логов
+        open('bot.log', 'w').close()
+        
+        await update.message.reply_text(
+            "✅ Логи успешно очищены",
+            reply_markup=create_main_reply_keyboard()
+        )
+        
+    except Exception as e:
+        logger.error(f"Ошибка в команде clear_logs: {e}")
+        await update.message.reply_text(
+            "❌ Ошибка при очистке логов",
+            reply_markup=create_main_reply_keyboard()
+        )
+
 # Обработчики callback-кнопок (оставлены для обратной совместимости)
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Обработчик нажатий на inline-кнопки"""
