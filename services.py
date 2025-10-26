@@ -568,7 +568,7 @@ def format_crypto_rates_message(crypto_rates: dict) -> str:
                 f"   <b>{symbol}</b>: {price_rub:,.0f} руб. {change_icon}\n"
             )
     
-    message += f"\n<i>Обновлено: {crypto_rates.get('update_time', 'неизвестно')}</i>\n\n"
+    message += f"\n<i>Обновлено: {crypto_rates.get('update_time', 'неизвестно')} (МСК)</i>\n\n"
     message += "💡 <i>Данные предоставлены CoinGecko API</i>"
     
     if crypto_rates.get('source') == 'coingecko':
