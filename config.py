@@ -1,5 +1,6 @@
 import os
 import logging
+from typing import Optional
 
 # Настройка логирования
 logging.basicConfig(
@@ -31,3 +32,19 @@ SUPPORTED_CURRENCIES = ['USD', 'EUR', 'GBP', 'JPY', 'CNY', 'CHF', 'CAD', 'AUD', 
 
 # Настройки погоды
 WEATHER_CITY = "Moscow"
+
+# 
+class Config:
+    def __init__(self):
+        self.TOKEN = self._get_env('TELEGRAM_BOT_TOKEN')
+        self.DATABASE_URL = self._get_env('DATABASE_URL')
+        self.DEEPSEEK_API_KEY = self._get_env('TG_BOT_APIDEEPSEEK', optional=True)
+        self.WEATHER_API_KEY = self._get_env('API_weather', optional=True)
+    
+    def _get_env(self, key: str, optional: bool = False) -> Optional[str]:
+        value = os.getenv(key)
+        if not value and not optional:
+            raise ValueError(f"Требуется переменная окружения {key}")
+        return value
+
+config = Config()
