@@ -20,12 +20,16 @@ async def post_init(application):
     await init_db()
     logger.info("База данных инициализирована")
     
-    # Логируем информацию о здоровье системы
+    # Логируем информацию о здоровье системы (только базовые проверки)
     try:
-        from health_check import check_bot_health, check_database_connection
+        from health_check import check_bot_health
         bot_health = check_bot_health()
-        db_health = check_database_connection()
-        logger.info(f"Health check - Bot: {'✅' if bot_health else '❌'}, DB: {'✅' if db_health else '❌'}")
+        logger.info(f"Health check - Bot: {'✅' if bot_health else '❌'}")
+        
+        # Не проверяем базу данных здесь, так как это асинхронная операция
+        # и может вызвать проблемы с event loop
+        logger.info("Database health check skipped during startup")
+        
     except Exception as e:
         logger.warning(f"Health check failed: {e}")
 
