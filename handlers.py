@@ -1,5 +1,5 @@
 import logging
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup
 from telegram.ext import ContextTypes
 from config import logger, DEEPSEEK_API_KEY
 from services import (
@@ -7,7 +7,7 @@ from services import (
     get_key_rate, format_key_rate_message, get_crypto_rates, 
     get_crypto_rates_fallback, format_crypto_rates_message, ask_deepseek
 )
-from utils import split_long_message, create_back_button
+from utils import split_long_message, create_back_button, log_user_action, create_main_reply_keyboard, create_other_functions_keyboard
 from db import get_user_alerts, clear_user_alerts, remove_alert, add_alert, update_user_info
 from services import get_weather_moscow, format_weather_message
 
@@ -20,30 +20,28 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         
         greeting = f"Привет, {user.first_name}!" if user.first_name else "Привет!"
         
+        # Логируем запуск бота
+        log_user_action(user.id, "start_bot")
+        
         # Проверяем доступность ИИ
         test_ai = await ask_deepseek("test", context)
         ai_available = not (test_ai.startswith("❌") or test_ai.startswith("⏰"))
         
-        keyboard = [
-            [InlineKeyboardButton("💱 Курсы валют", callback_data='currency_rates')],
-            [InlineKeyboardButton("₿ Криптовалюты", callback_data='crypto_rates')],
-            [InlineKeyboardButton("💎 Ключевая ставка", callback_data='key_rate')],
-        ]
+        start_message = (
+            f'{greeting} Я бот для отслеживания финансовых данных!\n\n'
+            '💡 <b>Основные возможности:</b>\n'
+            '• 💱 Курсы валют ЦБ РФ с прогнозом\n'
+            '• ₿ Криптовалюты в реальном времени\n'
+            '• 💎 Ключевая ставка ЦБ РФ\n'
+            '• 🤖 Универсальный ИИ помощник\n'
+            '• 🔔 Умные уведомления\n'
+            '• 🌤️ Погода в Москве\n\n'
+            '👇 <b>Выберите действие в меню ниже:</b>'
+        )
         
-        if ai_available:
-            keyboard.append([InlineKeyboardButton("🤖 Универсальный ИИ", callback_data='ai_chat')])
-        else:
-            keyboard.append([InlineKeyboardButton("❌ ИИ временно недоступен", callback_data='ai_unavailable')])
-            
-        keyboard.extend([
-            [InlineKeyboardButton("🔔 Мои уведомления", callback_data='my_alerts')],
-            [InlineKeyboardButton("🔧 Прочие функции", callback_data='other_functions')],
-            [InlineKeyboardButton("❓ Помощь", callback_data='help')],
-        ])
+        # Отправляем reply-клавиатуру
+        reply_markup = create_main_reply_keyboard()
         
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        
-        start_message = f'{greeting} Я бот для отслеживания финансовых данных!\n\nВыберите раздел:'
         await update.message.reply_text(start_message, parse_mode='HTML', reply_markup=reply_markup)
         
     except Exception as e:
@@ -70,60 +68,63 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 🌤️ **Погода:**
 Ежедневная рассылка в 08:00 МСК
+
+👇 **Или используйте кнопки меню ниже!**
 """
-    await update.message.reply_text(help_text, parse_mode='Markdown')
+    reply_markup = create_main_reply_keyboard()
+    await update.message.reply_text(help_text, parse_mode='Markdown', reply_markup=reply_markup)
 
 async def show_currency_rates(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Показывает курсы валют"""
     try:
+        log_user_action(update.effective_user.id, "view_currency_rates")
+        
         rates_today, date_today, rates_tomorrow, changes = get_currency_rates_with_tomorrow()
         
         if not rates_today:
-            await update.effective_message.reply_text(
+            await update.message.reply_text(
                 "❌ Не удалось получить курсы валют.", 
-                reply_markup=create_back_button()
+                reply_markup=create_main_reply_keyboard()
             )
             return
         
         message = format_currency_rates_message(rates_today, date_today, rates_tomorrow, changes)
-        await update.effective_message.reply_text(message, parse_mode='HTML', reply_markup=create_back_button())
+        await update.message.reply_text(message, parse_mode='HTML', reply_markup=create_main_reply_keyboard())
         
     except Exception as e:
         logger.error(f"Ошибка при показе курсов валют: {e}")
-        await update.effective_message.reply_text("❌ Ошибка при получении данных.")
+        await update.message.reply_text("❌ Ошибка при получении данных.", reply_markup=create_main_reply_keyboard())
 
 async def show_key_rate(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Показывает ключевую ставку"""
     try:
+        log_user_action(update.effective_user.id, "view_key_rate")
+        
         key_rate_data = get_key_rate()
         
         if not key_rate_data:
-            await update.effective_message.reply_text(
+            await update.message.reply_text(
                 "❌ Не удалось получить ключевую ставку.",
-                reply_markup=create_back_button()
+                reply_markup=create_main_reply_keyboard()
             )
             return
         
         message = format_key_rate_message(key_rate_data)
         
-        keyboard = [
-            [InlineKeyboardButton("💱 Курсы валют", callback_data='currency_rates')],
-            [InlineKeyboardButton("🔙 Назад в меню", callback_data='back_to_main')]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        
-        await update.effective_message.reply_text(message, parse_mode='HTML', reply_markup=reply_markup)
+        await update.message.reply_text(message, parse_mode='HTML', reply_markup=create_main_reply_keyboard())
         
     except Exception as e:
         logger.error(f"Ошибка при показе ключевой ставки: {e}")
-        await update.effective_message.reply_text("❌ Ошибка при получении данных.")
+        await update.message.reply_text("❌ Ошибка при получении данных.", reply_markup=create_main_reply_keyboard())
 
 async def show_crypto_rates(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Показывает курсы криптовалют"""
     try:
+        log_user_action(update.effective_user.id, "view_crypto_rates")
+        
         # Показываем сообщение о загрузке
         loading_message = "🔄 <b>Загружаем курсы криптовалют...</b>"
-        await update.effective_message.reply_text(loading_message, parse_mode='HTML', reply_markup=create_back_button())
+        await update.message.reply_text(loading_message, parse_mode='HTML')
         
         # Получаем данные
         crypto_rates = get_crypto_rates()
@@ -135,7 +136,7 @@ async def show_crypto_rates(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         
         if not crypto_rates:
             error_msg = "❌ <b>Не удалось получить курсы криптовалют.</b>"
-            await update.effective_message.reply_text(error_msg, parse_mode='HTML', reply_markup=create_back_button())
+            await update.message.reply_text(error_msg, parse_mode='HTML', reply_markup=create_main_reply_keyboard())
             return
         
         message_text = format_crypto_rates_message(crypto_rates)
@@ -144,25 +145,20 @@ async def show_crypto_rates(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         if crypto_rates.get('source') == 'demo_fallback':
             message_text += "\n\n⚠️ <i>Используются демонстрационные данные (CoinGecko API недоступен)</i>"
         
-        # Клавиатура с кнопками
-        keyboard = [
-            [InlineKeyboardButton("🔄 Обновить", callback_data='crypto_rates')],
-            [InlineKeyboardButton("🔙 Назад в меню", callback_data='back_to_main')]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        
-        await update.effective_message.reply_text(message_text, parse_mode='HTML', reply_markup=reply_markup)
+        await update.message.reply_text(message_text, parse_mode='HTML', reply_markup=create_main_reply_keyboard())
         
     except Exception as e:
         logger.error(f"Ошибка при показе курсов криптовалют: {e}")
-        await update.effective_message.reply_text("❌ Ошибка при получении данных.", reply_markup=create_back_button())
+        await update.message.reply_text("❌ Ошибка при получении данных.", reply_markup=create_main_reply_keyboard())
 
 async def show_ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Показывает интерфейс чата с ИИ"""
     try:
+        log_user_action(update.effective_user.id, "start_ai_chat")
+        
         if not DEEPSEEK_API_KEY:
             error_msg = "❌ <b>Функционал ИИ временно недоступен</b>"
-            await update.effective_message.reply_text(error_msg, parse_mode='HTML', reply_markup=create_back_button())
+            await update.message.reply_text(error_msg, parse_mode='HTML', reply_markup=create_main_reply_keyboard())
             return
         
         # Активируем режим ИИ для пользователя
@@ -181,26 +177,28 @@ async def show_ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             "• 🔧 Советы и решение проблем\n"
             "• 💬 Общение и поддержка\n\n"
             "Просто напишите ваш вопрос в чат!\n\n"
-            "<i>Для выхода из режима ИИ используйте кнопку 'Назад в меню'</i>"
+            "<i>Для выхода из режима ИИ используйте кнопку 'Главное меню'</i>"
         )
         
         keyboard = [
-            [InlineKeyboardButton("💡 Примеры вопросов", callback_data='ai_examples')],
-            [InlineKeyboardButton("🔙 Назад в меню", callback_data='back_to_main')]
+            [KeyboardButton("💡 Примеры вопросов")],
+            [KeyboardButton("🔙 Главное меню")]
         ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
+        reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True, persistent=True)
         
-        await update.effective_message.reply_text(welcome_message, parse_mode='HTML', reply_markup=reply_markup)
+        await update.message.reply_text(welcome_message, parse_mode='HTML', reply_markup=reply_markup)
             
     except Exception as e:
         logger.error(f"Ошибка при показе чата с ИИ: {e}")
-        await update.effective_message.reply_text("❌ Ошибка при запуске ИИ помощника.", reply_markup=create_back_button())
+        await update.message.reply_text("❌ Ошибка при запуске ИИ помощника.", reply_markup=create_main_reply_keyboard())
 
 async def show_other_functions(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Показывает меню прочих функций"""
     try:
+        log_user_action(update.effective_user.id, "view_other_functions")
+        
         message = (
-            "🔧 <b>ПРОЧИЕ ФУНКЦИИ</b>\n\n"
+            "🔧 <b>ДОПОЛНИТЕЛЬНЫЕ ФУНКЦИИ</b>\n\n"
             "Выберите дополнительную функцию:\n\n"
             
             "🌤️ <b>Погода:</b>\n"
@@ -226,27 +224,19 @@ async def show_other_functions(update: Update, context: ContextTypes.DEFAULT_TYP
             "💡 <i>Новые функции добавляются регулярно!</i>"
         )
         
-        keyboard = [
-            [InlineKeyboardButton("🌤️ Погода в Москве", callback_data='weather')],
-            [InlineKeyboardButton("📊 Статистика", callback_data='stats')],
-            [InlineKeyboardButton("⚙️ Настройки", callback_data='settings')],
-            [InlineKeyboardButton("ℹ️ О боте", callback_data='about')],
-            [InlineKeyboardButton("🔙 Назад в меню", callback_data='back_to_main')]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
+        reply_markup = create_other_functions_keyboard()
         
-        if update.message:
-            await update.message.reply_text(message, parse_mode='HTML', reply_markup=reply_markup)
-        else:
-            await update.effective_message.edit_text(message, parse_mode='HTML', reply_markup=reply_markup)
+        await update.message.reply_text(message, parse_mode='HTML', reply_markup=reply_markup)
             
     except Exception as e:
         logger.error(f"Ошибка при показе прочих функций: {e}")
-        await update.effective_message.reply_text("❌ Ошибка при загрузке функций.", reply_markup=create_back_button())
+        await update.message.reply_text("❌ Ошибка при загрузке функций.", reply_markup=create_main_reply_keyboard())
 
 async def show_bot_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Показывает статистику бота"""
     try:
+        log_user_action(update.effective_user.id, "view_bot_stats")
+        
         from db import get_all_users, get_all_alerts
         
         users = await get_all_users()
@@ -281,25 +271,20 @@ async def show_bot_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         
         message += "\n💡 <i>Статистика обновляется в реальном времени</i>"
         
-        keyboard = [
-            [InlineKeyboardButton("🔄 Обновить", callback_data='stats')],
-            [InlineKeyboardButton("🔧 Прочие функции", callback_data='other_functions')],
-            [InlineKeyboardButton("🔙 Назад в меню", callback_data='back_to_main')]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        
-        await update.effective_message.edit_text(message, parse_mode='HTML', reply_markup=reply_markup)
+        await update.message.reply_text(message, parse_mode='HTML', reply_markup=create_other_functions_keyboard())
         
     except Exception as e:
         logger.error(f"Ошибка при показе статистики: {e}")
-        await update.effective_message.edit_text(
+        await update.message.reply_text(
             "❌ Ошибка при загрузке статистики.",
-            reply_markup=create_back_button()
+            reply_markup=create_other_functions_keyboard()
         )
 
 async def show_bot_about(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Показывает информацию о боте"""
     try:
+        log_user_action(update.effective_user.id, "view_bot_about")
+        
         message = (
             "ℹ️ <b>ИНФОРМАЦИЯ О БОТЕ</b>\n\n"
             
@@ -331,25 +316,20 @@ async def show_bot_about(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             "⭐ <i>Бот постоянно развивается и улучшается!</i>"
         )
         
-        keyboard = [
-            [InlineKeyboardButton("📊 Статистика", callback_data='stats')],
-            [InlineKeyboardButton("🔧 Прочие функции", callback_data='other_functions')],
-            [InlineKeyboardButton("🔙 Назад в меню", callback_data='back_to_main')]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        
-        await update.effective_message.edit_text(message, parse_mode='HTML', reply_markup=reply_markup)
+        await update.message.reply_text(message, parse_mode='HTML', reply_markup=create_other_functions_keyboard())
         
     except Exception as e:
         logger.error(f"Ошибка при показе информации о боте: {e}")
-        await update.effective_message.edit_text(
+        await update.message.reply_text(
             "❌ Ошибка при загрузке информации.",
-            reply_markup=create_back_button()
+            reply_markup=create_other_functions_keyboard()
         )
 
 async def show_settings(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Показывает настройки"""
     try:
+        log_user_action(update.effective_user.id, "view_settings")
+        
         message = (
             "⚙️ <b>НАСТРОЙКИ</b>\n\n"
             
@@ -375,19 +355,13 @@ async def show_settings(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             "💡 <i>Настройки будут доступны для изменения в будущих обновлениях</i>"
         )
         
-        keyboard = [
-            [InlineKeyboardButton("🔧 Прочие функции", callback_data='other_functions')],
-            [InlineKeyboardButton("🔙 Назад в меню", callback_data='back_to_main')]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        
-        await update.effective_message.edit_text(message, parse_mode='HTML', reply_markup=reply_markup)
+        await update.message.reply_text(message, parse_mode='HTML', reply_markup=create_other_functions_keyboard())
         
     except Exception as e:
         logger.error(f"Ошибка при показе настроек: {e}")
-        await update.effective_message.edit_text(
+        await update.message.reply_text(
             "❌ Ошибка при загрузке настроек.",
-            reply_markup=create_back_button()
+            reply_markup=create_other_functions_keyboard()
         )
 
 async def handle_ai_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -404,6 +378,9 @@ async def handle_ai_message(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         if context.user_data.get('ai_mode') != True:
             return
             
+        # Логируем запрос к ИИ
+        log_user_action(user_id, "ai_request", {"message_length": len(user_message)})
+        
         # Показываем индикатор набора сообщения
         await update.message.chat.send_action(action="typing")
         
@@ -418,13 +395,16 @@ async def handle_ai_message(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         if len(message_parts) > 1:
             first_part += f"\n\n📄 <i>Часть 1 из {len(message_parts)}</i>"
         
+        keyboard = [
+            [KeyboardButton("🔄 Новый вопрос")],
+            [KeyboardButton("🔙 Главное меню")]
+        ]
+        reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True, persistent=True)
+        
         await update.message.reply_text(
             f"🤖 <b>ИИ Ассистент:</b>\n\n{first_part}",
             parse_mode='HTML',
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🔄 Новый вопрос", callback_data='ai_chat')],
-                [InlineKeyboardButton("🔙 Назад в меню", callback_data='back_to_main')]
-            ])
+            reply_markup=reply_markup
         )
         
         # Отправляем остальные части
@@ -442,14 +422,14 @@ async def handle_ai_message(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         logger.error(f"Ошибка в обработчике ИИ сообщений: {e}")
         await update.message.reply_text(
             "❌ Произошла ошибка при обработке вашего запроса.",
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🔙 Назад в меню", callback_data='back_to_main')]
-            ])
+            reply_markup=create_main_reply_keyboard()
         )
 
 async def alert_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Создание уведомления о курсе валюты"""
     try:
+        log_user_action(update.effective_user.id, "create_alert", {"args": context.args})
+        
         args = context.args
         
         if len(args) != 4:
@@ -459,7 +439,7 @@ async def alert_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
                 "• <code>/alert USD RUB 80 above</code> - уведомить когда USD выше 80 руб.\n"
                 "• <code>/alert EUR RUB 90 below</code> - уведомить когда EUR ниже 90 руб.",
                 parse_mode='HTML',
-                reply_markup=create_back_button()
+                reply_markup=create_main_reply_keyboard()
             )
             return
         
@@ -472,7 +452,7 @@ async def alert_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
                 f"❌ Валюта <b>{from_curr}</b> не поддерживается.\n\n"
                 f"💱 <b>Доступные валюты:</b> {', '.join(supported_currencies)}",
                 parse_mode='HTML',
-                reply_markup=create_back_button()
+                reply_markup=create_main_reply_keyboard()
             )
             return
         
@@ -482,7 +462,7 @@ async def alert_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
                 "❌ В настоящее время поддерживаются только уведомления для пар с RUB.\n"
                 "💡 Используйте: <code>/alert USD RUB 80 above</code>",
                 parse_mode='HTML',
-                reply_markup=create_back_button()
+                reply_markup=create_main_reply_keyboard()
             )
             return
         
@@ -493,7 +473,7 @@ async def alert_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         except ValueError:
             await update.message.reply_text(
                 "❌ Порог должен быть положительным числом.",
-                reply_markup=create_back_button()
+                reply_markup=create_main_reply_keyboard()
             )
             return
         
@@ -501,7 +481,7 @@ async def alert_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         if direction not in ['above', 'below']:
             await update.message.reply_text(
                 "❌ Направление должно быть 'above' или 'below'.",
-                reply_markup=create_back_button()
+                reply_markup=create_main_reply_keyboard()
             )
             return
         
@@ -529,7 +509,7 @@ async def alert_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         await update.message.reply_text(
             success_message,
             parse_mode='HTML',
-            reply_markup=create_back_button()
+            reply_markup=create_main_reply_keyboard()
         )
         
     except Exception as e:
@@ -537,13 +517,15 @@ async def alert_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         await update.message.reply_text(
             f"❌ Произошла ошибка при установке уведомления:\n<code>{str(e)}</code>",
             parse_mode='HTML',
-            reply_markup=create_back_button()
+            reply_markup=create_main_reply_keyboard()
         )
 
 async def myalerts_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Показывает активные уведомления пользователя"""
     try:
         user_id = update.effective_user.id
+        log_user_action(user_id, "view_my_alerts")
+        
         alerts = await get_user_alerts(user_id)
         
         if not alerts:
@@ -552,17 +534,7 @@ async def myalerts_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             message += "<code>/alert USD RUB 80 above</code>\n"
             message += "чтобы создать уведомление, когда курс USD превысит 80 рублей"
             
-            keyboard = [
-                [InlineKeyboardButton("💱 Создать уведомление", callback_data='create_alert')],
-                [InlineKeyboardButton("🔙 Назад в меню", callback_data='back_to_main')]
-            ]
-            reply_markup = InlineKeyboardMarkup(keyboard)
-            
-            # Используем правильный метод для отправки сообщения
-            if update.message:
-                await update.message.reply_text(message, parse_mode='HTML', reply_markup=reply_markup)
-            else:
-                await update.effective_message.reply_text(message, parse_mode='HTML', reply_markup=reply_markup)
+            await update.message.reply_text(message, parse_mode='HTML', reply_markup=create_main_reply_keyboard())
             return
         
         message = "🔔 <b>ВАШИ АКТИВНЫЕ УВЕДОМЛЕНИЯ</b>\n\n"
@@ -590,118 +562,76 @@ async def myalerts_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         message += "💡 <i>При срабатывании уведомление автоматически удаляется</i>"
         
         keyboard = [
-            [InlineKeyboardButton("🗑 Очистить все", callback_data='clear_all_alerts')],
-            [InlineKeyboardButton("💱 Создать ещё", callback_data='create_alert')],
-            [InlineKeyboardButton("🔙 Назад в меню", callback_data='back_to_main')]
+            [KeyboardButton("🗑 Очистить все уведомления")],
+            [KeyboardButton("💱 Создать уведомление")],
+            [KeyboardButton("🔙 Главное меню")]
         ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
+        reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True, persistent=True)
         
-        # Используем правильный метод для отправки сообщения
-        if update.message:
-            await update.message.reply_text(message, parse_mode='HTML', reply_markup=reply_markup)
-        else:
-            await update.effective_message.reply_text(message, parse_mode='HTML', reply_markup=reply_markup)
+        await update.message.reply_text(message, parse_mode='HTML', reply_markup=reply_markup)
         
     except Exception as e:
         logger.error(f"Ошибка в команде /myalerts: {e}")
         error_message = "❌ <b>Ошибка при получении уведомлений.</b>"
-        
-        # Используем правильный метод для отправки сообщения об ошибке
-        if update.message:
-            await update.message.reply_text(error_message, parse_mode='HTML', reply_markup=create_back_button())
-        else:
-            await update.effective_message.reply_text(error_message, parse_mode='HTML', reply_markup=create_back_button())
+        await update.message.reply_text(error_message, parse_mode='HTML', reply_markup=create_main_reply_keyboard())
 
-async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Показывает главное меню"""
+async def show_weather(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Показывает текущую погоду в Москве"""
     try:
-        user = update.effective_user
-        greeting = f"Привет, {user.first_name}!" if user.first_name else "Привет!"
+        log_user_action(update.effective_user.id, "view_weather")
         
-        # Проверяем доступность ИИ
-        test_ai = await ask_deepseek("test", context)
-        ai_available = not (test_ai.startswith("❌") or test_ai.startswith("⏰"))
+        # Показываем сообщение о загрузке
+        loading_message = "🔄 <b>Загружаем данные о погоде...</b>"
+        await update.message.reply_text(loading_message, parse_mode='HTML')
         
-        keyboard = [
-            [InlineKeyboardButton("💱 Курсы валют", callback_data='currency_rates')],
-            [InlineKeyboardButton("₿ Криптовалюты", callback_data='crypto_rates')],
-            [InlineKeyboardButton("💎 Ключевая ставка", callback_data='key_rate')],
-        ]
+        # Получаем данные о погоде
+        weather_data = get_weather_moscow()
+        message = format_weather_message(weather_data)
         
-        if ai_available:
-            keyboard.append([InlineKeyboardButton("🤖 Универсальный ИИ", callback_data='ai_chat')])
-        else:
-            keyboard.append([InlineKeyboardButton("❌ ИИ временно недоступен", callback_data='ai_unavailable')])
-            
-        keyboard.extend([
-            [InlineKeyboardButton("🔔 Мои уведомления", callback_data='my_alerts')],
-            [InlineKeyboardButton("🔧 Прочие функции", callback_data='other_functions')],
-            [InlineKeyboardButton("❓ Помощь", callback_data='help')],
-        ])
+        await update.message.reply_text(message, parse_mode='HTML', reply_markup=create_main_reply_keyboard())
         
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        
-        await update.effective_message.edit_text(
-            f'{greeting} Я бот для отслеживания финансовых данных!\n\nВыберите раздел:',
-            parse_mode='HTML',
-            reply_markup=reply_markup
-        )
     except Exception as e:
-        logger.error(f"Ошибка при показе главного меню: {e}")
+        logger.error(f"Ошибка при показе погоды: {e}")
+        await update.message.reply_text(
+            "❌ Ошибка при получении данных о погоде.",
+            reply_markup=create_main_reply_keyboard()
+        )
 
-# Обработчики callback-кнопок
-async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Обработчик нажатий на inline-кнопки"""
+async def handle_text_messages(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Обработчик текстовых сообщений для reply-меню"""
     try:
-        query = update.callback_query
-        await query.answer()
+        user_message = update.message.text
+        user_id = update.effective_user.id
         
-        data = query.data
+        # Логируем текстовое сообщение
+        log_user_action(user_id, "text_message", {"message": user_message})
         
-        if data == 'help':
-            await help_command(update, context)
-        elif data == 'back_to_main':
-            context.user_data['ai_mode'] = False
-            await show_main_menu(update, context)
-        elif data == 'currency_rates':
+        if user_message == "💱 Курсы валют":
             await show_currency_rates(update, context)
-        elif data == 'crypto_rates':
+        elif user_message == "₿ Криптовалюты":
             await show_crypto_rates(update, context)
-        elif data == 'key_rate':
+        elif user_message == "💎 Ключевая ставка":
             await show_key_rate(update, context)
-        elif data == 'ai_chat':
+        elif user_message == "🤖 ИИ помощник":
             await show_ai_chat(update, context)
-        elif data == 'my_alerts':
+        elif user_message == "🔔 Мои уведомления":
             await myalerts_command(update, context)
-        elif data == 'other_functions':
-            await show_other_functions(update, context)
-        elif data == 'weather':
+        elif user_message == "🌤️ Погода":
             await show_weather(update, context)
-        elif data == 'stats':
+        elif user_message == "🔧 Другие функции":
+            await show_other_functions(update, context)
+        elif user_message == "❓ Помощь":
+            await help_command(update, context)
+        elif user_message == "📊 Статистика":
             await show_bot_stats(update, context)
-        elif data == 'about':
-            await show_bot_about(update, context)
-        elif data == 'settings':
+        elif user_message == "⚙️ Настройки":
             await show_settings(update, context)
-        elif data == 'clear_all_alerts':
-            user_id = update.effective_user.id
-            await clear_user_alerts(user_id)
-            await query.edit_message_text(
-                "✅ Все уведомления очищены",
-                reply_markup=create_back_button()
-            )
-        elif data == 'create_alert':
-            await query.edit_message_text(
-                "📝 <b>Создание уведомления</b>\n\n"
-                "Используйте команду:\n"
-                "<code>/alert USD RUB 80 above</code>\n\n"
-                "💡 <b>Примеры:</b>\n"
-                "• <code>/alert USD RUB 85 above</code> - уведомит когда USD выше 85 руб.\n"
-                "• <code>/alert EUR RUB 90 below</code> - уведомит когда EUR ниже 90 руб.",
-                parse_mode='HTML',
-                reply_markup=create_back_button()
-            )
-        elif data == 'ai_examples':
+        elif user_message == "ℹ️ О боте":
+            await show_bot_about(update, context)
+        elif user_message == "🔙 Главное меню":
+            context.user_data['ai_mode'] = False
+            await start(update, context)
+        elif user_message == "💡 Примеры вопросов":
             examples_text = (
                 "💡 <b>ПРИМЕРЫ ВОПРОСОВ ДЛЯ ИИ:</b>\n\n"
                 "💰 <b>Финансы:</b>\n"
@@ -733,72 +663,111 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 "• Что думаешь об искусственном интеллекте?\n"
                 "• Давай обсудим будущее технологий"
             )
-            await query.edit_message_text(
+            await update.message.reply_text(
                 examples_text,
                 parse_mode='HTML',
-                reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("🤖 Задать вопрос", callback_data='ai_chat')],
-                    [InlineKeyboardButton("🔙 Назад в меню", callback_data='back_to_main')]
-                ])
+                reply_markup=create_main_reply_keyboard()
+            )
+        elif user_message == "🔄 Новый вопрос":
+            await show_ai_chat(update, context)
+        elif user_message == "🗑 Очистить все уведомления":
+            user_id = update.effective_user.id
+            await clear_user_alerts(user_id)
+            await update.message.reply_text(
+                "✅ Все уведомления очищены",
+                reply_markup=create_main_reply_keyboard()
+            )
+        elif user_message == "💱 Создать уведомление":
+            await update.message.reply_text(
+                "📝 <b>Создание уведомления</b>\n\n"
+                "Используйте команду:\n"
+                "<code>/alert USD RUB 80 above</code>\n\n"
+                "💡 <b>Примеры:</b>\n"
+                "• <code>/alert USD RUB 85 above</code> - уведомит когда USD выше 85 руб.\n"
+                "• <code>/alert EUR RUB 90 below</code> - уведомит когда EUR ниже 90 руб.",
+                parse_mode='HTML',
+                reply_markup=create_main_reply_keyboard()
+            )
+        else:
+            # Если сообщение не распознано как команда меню, пробуем обработать как запрос к ИИ
+            if context.user_data.get('ai_mode') == True:
+                await handle_ai_message(update, context)
+            else:
+                # Если не режим ИИ и не команда меню, показываем подсказку
+                await update.message.reply_text(
+                    "🤔 <b>Не понял вашу команду</b>\n\n"
+                    "Используйте кнопки меню ниже или команды:\n"
+                    "/start - Главное меню\n"
+                    "/help - Справка по командам",
+                    parse_mode='HTML',
+                    reply_markup=create_main_reply_keyboard()
+                )
+                
+    except Exception as e:
+        logger.error(f"Ошибка в обработчике текстовых сообщений: {e}")
+        await update.message.reply_text(
+            "❌ Произошла ошибка при обработке сообщения.",
+            reply_markup=create_main_reply_keyboard()
+        )
+
+# Обработчики callback-кнопок (оставлены для обратной совместимости)
+async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Обработчик нажатий на inline-кнопки"""
+    try:
+        query = update.callback_query
+        await query.answer()
+        
+        data = query.data
+        
+        if data == 'help':
+            await help_command(update, context)
+        elif data == 'back_to_main':
+            context.user_data['ai_mode'] = False
+            await start(update, context)
+        elif data == 'currency_rates':
+            await show_currency_rates(update, context)
+        elif data == 'crypto_rates':
+            await show_crypto_rates(update, context)
+        elif data == 'key_rate':
+            await show_key_rate(update, context)
+        elif data == 'ai_chat':
+            await show_ai_chat(update, context)
+        elif data == 'my_alerts':
+            await myalerts_command(update, context)
+        elif data == 'other_functions':
+            await show_other_functions(update, context)
+        elif data == 'weather':
+            await show_weather(update, context)
+        elif data == 'stats':
+            await show_bot_stats(update, context)
+        elif data == 'about':
+            await show_bot_about(update, context)
+        elif data == 'settings':
+            await show_settings(update, context)
+        elif data == 'clear_all_alerts':
+            user_id = update.effective_user.id
+            await clear_user_alerts(user_id)
+            await query.edit_message_text(
+                "✅ Все уведомления очищены",
+                reply_markup=create_main_reply_keyboard()
+            )
+        elif data == 'create_alert':
+            await query.edit_message_text(
+                "📝 <b>Создание уведомления</b>\n\n"
+                "Используйте команду:\n"
+                "<code>/alert USD RUB 80 above</code>\n\n"
+                "💡 <b>Примеры:</b>\n"
+                "• <code>/alert USD RUB 85 above</code> - уведомит когда USD выше 85 руб.\n"
+                "• <code>/alert EUR RUB 90 below</code> - уведомит когда EUR ниже 90 руб.",
+                parse_mode='HTML',
+                reply_markup=create_main_reply_keyboard()
             )
         else:
             await query.edit_message_text(
                 "🔄 <b>Функция в разработке</b>",
                 parse_mode='HTML',
-                reply_markup=create_back_button()
+                reply_markup=create_main_reply_keyboard()
             )
 
     except Exception as e:
         logger.error(f"Ошибка в обработчике кнопок: {e}")
-
-# Добавьте новую функцию
-async def show_weather(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Показывает текущую погоду в Москве"""
-    try:
-        # Показываем сообщение о загрузке
-        loading_message = "🔄 <b>Загружаем данные о погоде...</b>"
-        await update.effective_message.reply_text(loading_message, parse_mode='HTML', reply_markup=create_back_button())
-        
-        # Получаем данные о погоде
-        weather_data = get_weather_moscow()
-        message = format_weather_message(weather_data)
-        
-        keyboard = [
-            [InlineKeyboardButton("🔄 Обновить", callback_data='weather')],
-            [InlineKeyboardButton("🔧 Прочие функции", callback_data='other_functions')],
-            [InlineKeyboardButton("🔙 Назад в меню", callback_data='back_to_main')]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        
-        await update.effective_message.reply_text(message, parse_mode='HTML', reply_markup=reply_markup)
-        
-    except Exception as e:
-        logger.error(f"Ошибка при показе погоды: {e}")
-        await update.effective_message.reply_text(
-            "❌ Ошибка при получении данных о погоде.",
-            reply_markup=create_back_button()
-        )
-
-
-# состояние бота
-
-async def health_check(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Проверка состояния бота"""
-    try:
-        from db import get_all_users
-        users = await get_all_users()
-        
-        health_status = {
-            'status': 'healthy',
-            'users_count': len(users),
-            'timestamp': datetime.now().isoformat(),
-            'version': '1.0.0'
-        }
-        
-        await update.message.reply_text(
-            f"🟢 Бот работает нормально\n"
-            f"👥 Пользователей: {len(users)}\n"
-            f"🕒 Время: {datetime.now().strftime('%d.%m.%Y %H:%M')}"
-        )
-    except Exception as e:
-        await update.message.reply_text(f"🔴 Ошибка здоровья бота: {e}")
