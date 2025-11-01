@@ -609,7 +609,7 @@ async def handle_text_messages(update: Update, context: ContextTypes.DEFAULT_TYP
             # Очищаем данные создания уведомления
             for key in ['creating_alert', 'alert_stage', 'alert_currency', 'alert_direction', 'alert_direction_display']:
                 context.user_data.pop(key, None)
-            await start(update, context)
+            await show_main_menu(update, context)  # ← ЭТО БЫСТРО
             return
         
         # Обработка процесса создания уведомления
