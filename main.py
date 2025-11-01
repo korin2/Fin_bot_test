@@ -1,4 +1,3 @@
-
 import logging
 import asyncio
 import sys
@@ -6,13 +5,23 @@ import os
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters
 from config import TOKEN, logger
 from db import init_db
-from handlers import (
-    start, stop_command, help_command, button_handler, show_currency_rates,
-    handle_ai_message, alert_command, myalerts_command, show_key_rate, 
-    show_crypto_rates, show_ai_chat, show_other_functions, show_bot_stats, 
-    show_bot_about, show_settings, show_weather, handle_text_messages,
-    logs_command, clear_logs_command, status_command, myid_command
+
+# Импортируем обработчики из новых модулей
+from handlers_basic import (
+    start, stop_command, help_command, show_main_menu,
+    show_other_functions, show_bot_stats, show_bot_about, 
+    show_settings, myid_command
 )
+from handlers_finance import (
+    show_currency_rates, show_key_rate, show_crypto_rates, show_weather
+)
+from handlers_alerts import (
+    alert_command, myalerts_command, show_alerts_menu
+)
+from handlers_ai import show_ai_chat
+from handlers_admin import status_command, logs_command, clear_logs_command
+from handlers_text import handle_text_messages
+from handlers_callbacks import button_handler
 from jobs import setup_jobs
 
 async def post_init(application):
@@ -20,16 +29,12 @@ async def post_init(application):
     await init_db()
     logger.info("База данных инициализирована")
     
-    # Логируем информацию о здоровье системы (только базовые проверки)
+    # Логируем информацию о здоровье системы
     try:
         from health_check import check_bot_health
         bot_health = check_bot_health()
         logger.info(f"Health check - Bot: {'✅' if bot_health else '❌'}")
-        
-        # Не проверяем базу данных здесь, так как это асинхронная операция
-        # и может вызвать проблемы с event loop
         logger.info("Database health check skipped during startup")
-        
     except Exception as e:
         logger.warning(f"Health check failed: {e}")
 
@@ -45,24 +50,31 @@ def main():
         application = Application.builder().token(TOKEN).post_init(post_init).build()
 
         # Регистрация обработчиков команд
+        # Основные команды
         application.add_handler(CommandHandler("start", start))
         application.add_handler(CommandHandler("stop", stop_command))
         application.add_handler(CommandHandler("help", help_command))
+        application.add_handler(CommandHandler("myid", myid_command))
+        
+        # Финансовые команды
         application.add_handler(CommandHandler("rates", show_currency_rates))
         application.add_handler(CommandHandler("currency", show_currency_rates))
         application.add_handler(CommandHandler("keyrate", show_key_rate))
         application.add_handler(CommandHandler("crypto", show_crypto_rates))
-        application.add_handler(CommandHandler("ai", show_ai_chat))
+        application.add_handler(CommandHandler("weather", show_weather))
+        
+        # Команды уведомлений
         application.add_handler(CommandHandler("alert", alert_command))
         application.add_handler(CommandHandler("myalerts", myalerts_command))
-        application.add_handler(CommandHandler("weather", show_weather))
+        
+        # ИИ команды
+        application.add_handler(CommandHandler("ai", show_ai_chat))
+        
+        # Административные команды
+        application.add_handler(CommandHandler("status", status_command))
         application.add_handler(CommandHandler("logs", logs_command))
         application.add_handler(CommandHandler("clearlogs", clear_logs_command))
-        application.add_handler(CommandHandler("status", status_command))
-        application.add_handler(CommandHandler("myid", myid_command))
 
-        
-   
         # Обработчики кнопок и сообщений
         application.add_handler(CallbackQueryHandler(button_handler))
         application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_messages))
