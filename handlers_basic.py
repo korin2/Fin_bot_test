@@ -3,8 +3,10 @@ from telegram import Update
 from telegram.ext import ContextTypes
 from config import logger, DEEPSEEK_API_KEY
 from utils import log_user_action, create_main_reply_keyboard
-from services import ask_deepseek
+# Обновляем импорт
+from api_ai import ask_deepseek
 from db import update_user_info
+
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Обработчик команды /start - только для первого запуска"""
