@@ -3,7 +3,8 @@ from telegram import Update, KeyboardButton, ReplyKeyboardMarkup
 from telegram.ext import ContextTypes
 from config import logger, DEEPSEEK_API_KEY
 from utils import log_user_action, create_ai_keyboard, create_main_reply_keyboard, split_long_message
-from services import ask_deepseek
+# Обновляем импорт
+from api_ai import ask_deepseek
 
 async def show_ai_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Показывает интерфейс чата с ИИ"""
