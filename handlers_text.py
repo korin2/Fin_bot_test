@@ -13,6 +13,7 @@ from handlers_alerts import (
 from handlers_ai import show_ai_chat, handle_ai_message, show_ai_examples
 from db import clear_user_alerts
 
+
 async def handle_text_messages(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Обработчик текстовых сообщений для reply-меню"""
     try:
