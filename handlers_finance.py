@@ -4,7 +4,7 @@ from telegram.ext import ContextTypes
 from config import logger
 from utils import log_user_action, create_main_reply_keyboard
 # Обновляем импорты
-from api_currency import get_currency_rates_with_tomorrow, format_currency_rates_message
+from api_currency import get_currency_rates_with_history, format_currency_rates_message
 from api_keyrate import get_key_rate, format_key_rate_message
 from api_crypto import get_crypto_rates, get_crypto_rates_fallback, format_crypto_rates_message
 from api_weather import get_weather_moscow, format_weather_message
@@ -14,7 +14,8 @@ async def show_currency_rates(update: Update, context: ContextTypes.DEFAULT_TYPE
     try:
         log_user_action(update.effective_user.id, "view_currency_rates")
         
-        rates_today, date_today, rates_tomorrow, changes = get_currency_rates_with_tomorrow()
+        # Используем новую функцию с историей
+        rates_today, date_today, rates_yesterday, changes_yesterday, rates_tomorrow, changes_tomorrow = get_currency_rates_with_history()
         
         if not rates_today:
             await update.message.reply_text(
@@ -23,13 +24,17 @@ async def show_currency_rates(update: Update, context: ContextTypes.DEFAULT_TYPE
             )
             return
         
-        message = format_currency_rates_message(rates_today, date_today, rates_tomorrow, changes)
+        message = format_currency_rates_message(
+            rates_today, date_today, rates_yesterday, changes_yesterday, 
+            rates_tomorrow, changes_tomorrow
+        )
         await update.message.reply_text(message, parse_mode='HTML', reply_markup=create_main_reply_keyboard())
         
     except Exception as e:
         logger.error(f"Ошибка при показе курсов валют: {e}")
         await update.message.reply_text("❌ Ошибка при получении данных.", reply_markup=create_main_reply_keyboard())
 
+# Остальные функции остаются без изменений...
 async def show_key_rate(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Показывает ключевую ставку"""
     try:
@@ -50,6 +55,8 @@ async def show_key_rate(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     except Exception as e:
         logger.error(f"Ошибка при показе ключевой ставки: {e}")
         await update.message.reply_text("❌ Ошибка при получении данных.", reply_markup=create_main_reply_keyboard())
+
+
 
 async def show_crypto_rates(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Показывает курсы криптовалют"""
