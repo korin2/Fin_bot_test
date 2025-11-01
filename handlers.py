@@ -605,11 +605,8 @@ async def handle_text_messages(update: Update, context: ContextTypes.DEFAULT_TYP
         
         elif user_message == "🔙 Главное меню":
             logger.info(f"Пользователь {user_id} нажал кнопку Главное меню")
-            context.user_data['ai_mode'] = False
-            # Очищаем данные создания уведомления
-            for key in ['creating_alert', 'alert_stage', 'alert_currency', 'alert_direction', 'alert_direction_display']:
-                context.user_data.pop(key, None)
-            await show_main_menu(update, context)  # ← ЭТО БЫСТРО
+            clear_user_context(context)  # Быстрая очистка
+            await show_main_menu(update, context)
             return
         
         # Обработка процесса создания уведомления
