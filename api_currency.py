@@ -125,7 +125,7 @@ def format_currency_rates_message(rates_today: dict, date_today: str,
             data = rates_today[currency]
             
             message += f"💵 <b>{data['name']}</b> ({currency}):\n"
-            message += f"   <b>{data['value']:.2f} руб.</b>\n"
+            message += f"   <b>Сегодня: {data['value']:.2f} руб.</b>\n"  # Добавили "Сегодня:"
             
             # Показываем вчерашний курс и изменение
             if changes_yesterday and currency in changes_yesterday:
