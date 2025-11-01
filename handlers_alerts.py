@@ -4,7 +4,8 @@ from telegram.ext import ContextTypes
 from config import logger, SUPPORTED_CURRENCIES
 from utils import log_user_action, create_alerts_keyboard, create_currency_selection_keyboard, create_alert_direction_keyboard
 from db import get_user_alerts, clear_user_alerts, add_alert
-from services import get_currency_rates_with_tomorrow
+# Обновляем импорт
+from api_currency import get_currency_rates_with_tomorrow
 
 async def show_alerts_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Показывает меню уведомлений"""
