@@ -580,18 +580,21 @@ def format_crypto_rates_message(crypto_rates: dict) -> str:
 # ФУНКЦИИ ДЛЯ РАБОТЫ С ИИ DEEPSEEK
 # =============================================================================
 
-async def ask_deepseek(prompt: str, context: ContextTypes.DEFAULT_TYPE = None) -> str:
+async def ask_deepseek(prompt: str, context: ContextTypes.DEFAULT_TYPE = None, fast_check: bool = False) -> str:
     """Отправляет запрос к API DeepSeek и возвращает ответ"""
     if not DEEPSEEK_API_KEY:
         return "❌ Функционал ИИ временно недоступен. Отсутствует API ключ."
     
-    try:
-        url = f"{DEEPSEEK_API_BASE}chat/completions"
-        
-        headers = {
-            'Content-Type': 'application/json',
-            'Authorization': f'Bearer {DEEPSEEK_API_KEY}'
-        }
+    # Быстрая проверка доступности API
+    if fast_check:
+        try:
+            url = f"{DEEPSEEK_API_BASE}models"
+            headers = {'Authorization': f'Bearer {DEEPSEEK_API_KEY}'}
+            response = requests.get(url, headers=headers, timeout=5)
+            return "✅" if response.status_code == 200 else "❌"
+        except:
+            return "❌"
+
         
         # УНИВЕРСАЛЬНЫЙ ПРОМПТ ДЛЯ ЛЮБЫХ ВОПРОСОВ
         system_message = """Ты - универсальный ИИ помощник в телеграм боте. Ты помогаешь пользователям с любыми вопросами, включая:
