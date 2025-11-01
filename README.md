@@ -25,19 +25,32 @@
 
 ```text
 bot/
-├── main.py              # Точка входа, запуск бота
-├── config.py            # Настройки и конфигурация
-├── handlers.py          # Обработчики команд и сообщений
-├── services.py          # Работа с внешними API (ЦБ РФ, CoinGecko, DeepSeek)
-├── jobs.py              # Фоновые задачи и уведомления
-├── utils.py             # Вспомогательные функции
-├── db.py               # Работа с базой данных PostgreSQL
-├── health.py           # Health check endpoints для Railway
-├── health_check.py     # Скрипт проверки здоровья системы
-├── run_bot.sh          # Скрипт безопасного запуска бота
-├── railway.toml        # Конфигурация для деплоя на Railway
-├── requirements.txt    # Зависимости проекта
-└── README.md          # Документация
+├── main.py                 # Обновленная точка входа
+├── config.py              # Конфигурация
+├── handlers_basic.py      # Основные команды (180 строк)
+├── handlers_finance.py    # Финансовые команды (120 строк)
+├── handlers_alerts.py     # Уведомления (250 строк)
+├── handlers_ai.py         # ИИ помощник (100 строк)
+├── handlers_admin.py      # Административные команды (80 строк)
+├── handlers_text.py       # Обработчик текстовых сообщений (150 строк)
+├── handlers_callbacks.py  # Обработчик callback-кнопок (50 строк)
+├── api_currency.py        # API ЦБ РФ (120 строк)
+├── api_keyrate.py         # Ключевая ставка (120 строк)
+├── api_crypto.py          # Криптовалюты (150 строк)
+├── api_ai.py              # DeepSeek AI (80 строк)
+├── api_weather.py         # Погода (100 строк)
+├── notifications.py       # Уведомления и рассылки (120 строк)
+├── services.py           # Главный файл сервисов (для совместимости)
+├── jobs.py               # Фоновые задачи
+├── utils.py              # Вспомогательные функции
+├── db.py                 # База данных
+├── health.py             # Health checks
+├── health_check.py       # Скрипт проверки здоровья
+├── run_bot.sh           # Скрипт запуска
+├── railway.toml         # Конфигурация Railway
+├── requirements.txt     # Зависимости
+├── test_imports.py     # Скрипт проверки импортов
+└── README.md           # Документация
 ```
 
 ## 🛠 Установка и запуск
