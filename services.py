@@ -5,7 +5,8 @@
 # Импортируем все функции из отдельных API модулей
 from api_currency import (
     get_currency_rates_for_date,
-    get_currency_rates_with_tomorrow,
+    get_currency_rates_with_tomorrow,  # для обратной совместимости
+    get_currency_rates_with_history,   # новая функция
     format_currency_rates_message
 )
 
@@ -38,6 +39,7 @@ __all__ = [
     # Currency API
     'get_currency_rates_for_date',
     'get_currency_rates_with_tomorrow',
+    'get_currency_rates_with_history',
     'format_currency_rates_message',
     
     # Key Rate API
