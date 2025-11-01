@@ -7,6 +7,8 @@ from handlers_finance import show_currency_rates, show_crypto_rates, show_key_ra
 from handlers_alerts import myalerts_command, show_alerts_menu
 from handlers_ai import show_ai_chat
 from db import clear_user_alerts
+from utils import create_main_reply_keyboard
+
 
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Обработчик нажатий на inline-кнопки"""
