@@ -67,20 +67,45 @@ async def send_daily_rates(context: ContextTypes.DEFAULT_TYPE):
         
         # Формируем сводное сообщение
         logger.info("💱 [РАССЫЛКА КУРСОВ] Получаем данные о курсах валют...")
-        rates_today, date_today, _, _ = get_currency_rates_with_tomorrow()
+        rates_today, date_today, _, _, rates_tomorrow, changes_tomorrow = get_currency_rates_with_history()
         
         logger.info("💎 [РАССЫЛКА КУРСОВ] Получаем ключевую ставку...")
         key_rate_data = get_key_rate()
         
         message = "🌅 <b>ЕЖЕДНЕВНАЯ ФИНАНСОВАЯ СВОДКА</b>\n\n"
         
-        # Добавляем курсы валют
+        # Добавляем курсы валют с завтрашними изменениями
         if rates_today:
             message += "💱 <b>Основные курсы ЦБ РФ:</b>\n"
+            
             for currency in ['USD', 'EUR']:
                 if currency in rates_today:
-                    rate = rates_today[currency]['value']
-                    message += f"   {currency}: <b>{rate:.2f} руб.</b>\n"
+                    today_rate = rates_today[currency]['value']
+                    
+                    # Формируем строку с завтрашними изменениями если есть
+                    if changes_tomorrow and currency in changes_tomorrow:
+                        change_info = changes_tomorrow[currency]
+                        change_icon = "📈" if change_info['change'] > 0 else "📉" if change_info['change'] < 0 else "➡️"
+                        
+                        message += (
+                            f"   <b>{currency}:</b> {today_rate:.2f} руб.\n"
+                            f"      <i>Завтра: {change_info['tomorrow_value']:.2f} руб. {change_icon}</i>\n"
+                            f"      <i>Изменение: {change_info['change']:+.2f} руб. ({change_info['change_percent']:+.2f}%)</i>\n"
+                        )
+                    elif rates_tomorrow and currency in rates_tomorrow:
+                        # Если курс на завтра есть, но изменений нет
+                        tomorrow_rate = rates_tomorrow[currency]['value']
+                        message += (
+                            f"   <b>{currency}:</b> {today_rate:.2f} руб.\n"
+                            f"      <i>Завтра: {tomorrow_rate:.2f} руб. ➡️</i>\n"
+                        )
+                    else:
+                        # Если курса на завтра нет
+                        message += (
+                            f"   <b>{currency}:</b> {today_rate:.2f} руб.\n"
+                            f"      <i>Завтра: ЦБ РФ еще не установил курс</i>\n"
+                        )
+            
             message += "\n"
         
         # Добавляем ключевую ставку
