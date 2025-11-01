@@ -3,12 +3,11 @@ from telegram import Update
 from telegram.ext import ContextTypes
 from config import logger
 from utils import log_user_action, create_main_reply_keyboard
-from services import (
-    get_currency_rates_with_tomorrow, format_currency_rates_message,
-    get_key_rate, format_key_rate_message, get_crypto_rates,
-    get_crypto_rates_fallback, format_crypto_rates_message,
-    get_weather_moscow, format_weather_message
-)
+# Обновляем импорты
+from api_currency import get_currency_rates_with_tomorrow, format_currency_rates_message
+from api_keyrate import get_key_rate, format_key_rate_message
+from api_crypto import get_crypto_rates, get_crypto_rates_fallback, format_crypto_rates_message
+from api_weather import get_weather_moscow, format_weather_message
 
 async def show_currency_rates(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Показывает курсы валют"""
