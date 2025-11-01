@@ -1,8 +1,9 @@
 import logging
 from telegram.ext import ContextTypes
 from datetime import datetime
-from services import check_alerts, send_daily_rates, send_daily_weather
 from config import logger
+# Обновляем импорты
+from notifications import check_alerts, send_daily_rates, send_daily_weather
 
 def setup_jobs(application):
     """Настройка фоновых задач"""
