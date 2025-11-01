@@ -117,6 +117,27 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     reply_markup = create_main_reply_keyboard()
     await update.message.reply_text(help_text, parse_mode='Markdown', reply_markup=reply_markup)
 
+async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Быстрое отображение главного меню без лишних операций"""
+    try:
+        user = update.effective_user
+        greeting = f"Привет, {user.first_name}!" if user.first_name else "Привет!"
+        
+        # Минимальное сообщение для главного меню
+        menu_message = (
+            f'{greeting}\n'
+            f'👇 <b>Выберите действие в меню ниже:</b>'
+        )
+        
+        # Отправляем reply-клавиатуру
+        reply_markup = create_main_reply_keyboard()
+        
+        await update.message.reply_text(menu_message, parse_mode='HTML', reply_markup=reply_markup)
+        
+    except Exception as e:
+        logger.error(f"Ошибка при показе главного меню: {e}")
+        await update.message.reply_text("❌ Произошла ошибка.", reply_markup=create_main_reply_keyboard())
+
 # Функции уведомлений
 async def show_alerts_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Показывает меню уведомлений"""
