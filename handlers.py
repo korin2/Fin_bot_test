@@ -1287,5 +1287,16 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     except Exception as e:
         logger.error(f"Ошибка в обработчике кнопок: {e}")
+        
+# вспомогательная функция
+def clear_user_context(context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Очищает контекст пользователя для быстрого возврата в меню"""
+    keys_to_clear = [
+        'ai_mode', 'creating_alert', 'alert_stage', 
+        'alert_currency', 'alert_direction', 'alert_direction_display',
+        'waiting_for_ai', 'last_ai_response'
+    ]
+    for key in keys_to_clear:
+        context.user_data.pop(key, None)
 
 
