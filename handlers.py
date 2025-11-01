@@ -13,20 +13,17 @@ from services import get_weather_moscow, format_weather_message
 
 # Основные команды
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Обработчик команды /start"""
+    """Обработчик команды /start - только для первого запуска"""
     try:
         user = update.effective_user
         await update_user_info(user.id, user.first_name, user.username)
         
-        greeting = f"Привет, {user.first_name}!" if user.first_name else "Привет!"
-        
-        # Логируем запуск бота
+        # Логируем запуск бота (только для настоящего /start)
         log_user_action(user.id, "start_bot")
         
-        # Проверяем доступность ИИ
-        test_ai = await ask_deepseek("test", context)
-        ai_available = not (test_ai.startswith("❌") or test_ai.startswith("⏰"))
+        greeting = f"Привет, {user.first_name}!" if user.first_name else "Привет!"
         
+        # Полное приветственное сообщение только для команды /start
         start_message = (
             f'{greeting}\n'
             f'Я бот для отслеживания финансовых данных и не только!\n\n'
@@ -40,14 +37,24 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             '👇 <b>Выберите действие в меню ниже:</b>'
         )
         
-        # Отправляем reply-клавиатуру
-        reply_markup = create_main_reply_keyboard()
+        # Проверяем доступность ИИ только при реальном старте (не при возврате в меню)
+        if DEEPSEEK_API_KEY:
+            try:
+                # Быстрая проверка без полного запроса
+                test_ai = await ask_deepseek("test", context, fast_check=True)
+                ai_available = not (test_ai.startswith("❌") or test_ai.startswith("⏰"))
+                if not ai_available:
+                    start_message += "\n\n⚠️ <i>ИИ помощник временно недоступен</i>"
+            except:
+                start_message += "\n\n⚠️ <i>ИИ помощник временно недоступен</i>"
         
+        reply_markup = create_main_reply_keyboard()
         await update.message.reply_text(start_message, parse_mode='HTML', reply_markup=reply_markup)
         
     except Exception as e:
         logger.error(f"Ошибка в команде /start: {e}")
-        await update.message.reply_text("❌ Произошла ошибка при запуске бота.")
+        # При ошибке все равно показываем главное меню
+        await show_main_menu(update, context)
 
 async def stop_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Обработчик команды /stop - прощание с пользователем"""
