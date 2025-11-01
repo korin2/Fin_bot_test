@@ -62,6 +62,11 @@ async def handle_currency_selection(update: Update, context: ContextTypes.DEFAUL
     try:
         selected_currency = update.message.text
         
+        # Сначала проверяем навигационные кнопки
+        if selected_currency == "🔙 Назад к уведомлениям":
+            await handle_alerts_back_navigation(update, context)
+            return
+        
         if selected_currency not in SUPPORTED_CURRENCIES:
             await update.message.reply_text(
                 "❌ Пожалуйста, выберите валюту из списка ниже:",
@@ -100,6 +105,11 @@ async def handle_direction_selection(update: Update, context: ContextTypes.DEFAU
     """Обрабатывает выбор направления уведомления"""
     try:
         direction_text = update.message.text
+        
+        # Сначала проверяем навигационные кнопки
+        if direction_text == "🔙 Назад к валютам":
+            await handle_alerts_back_navigation(update, context)
+            return
         
         if direction_text == "📈 Выше порога":
             direction = 'above'
@@ -146,8 +156,7 @@ async def handle_threshold_input(update: Update, context: ContextTypes.DEFAULT_T
         
         # Проверяем, не является ли сообщение командой назад
         if threshold_text == "🔙 Назад к условиям":
-            context.user_data['alert_stage'] = 'select_direction'
-            await handle_currency_selection(update, context)
+            await handle_alerts_back_navigation(update, context)
             return
         
         # Парсим пороговое значение
