@@ -3,11 +3,9 @@ from telegram import Update, KeyboardButton, ReplyKeyboardMarkup
 from telegram.ext import ContextTypes
 from config import logger, SUPPORTED_CURRENCIES
 from utils import log_user_action, create_alerts_keyboard, create_currency_selection_keyboard, create_alert_direction_keyboard
-from db import get_user_alerts, clear_user_alerts, add_alert
+from db import get_user_alerts, clear_user_alerts, add_alert, get_user_settings, update_weather_notifications, get_users_with_weather_notifications
 # Обновляем импорт
 from api_currency import get_currency_rates_with_tomorrow
-# handlers_alerts.py - добавляем импорты
-from db import get_user_settings, update_weather_notifications, get_users_with_weather_notifications
 
 # handlers_alerts.py - обновляем show_alerts_menu
 async def show_alerts_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
