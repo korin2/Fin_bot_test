@@ -1,48 +1,47 @@
-# handlers_text.py - обновляем импорты
+# handlers_text.py
 import logging
 from telegram import Update
 from telegram.ext import ContextTypes
 from config import logger
 from utils import log_user_action, create_main_reply_keyboard, create_alerts_keyboard
-from handlers_basic import show_main_menu, show_other_functions, help_command
+from handlers_basic import show_main_menu, show_other_functions, help_command, show_bot_stats, show_settings, show_bot_about
 from handlers_finance import show_currency_rates, show_crypto_rates, show_key_rate, show_weather
-from handlers_alerts import (
-    show_alerts_menu, start_create_alert, myalerts_command,
-    handle_currency_selection, handle_direction_selection,
-    handle_threshold_input, handle_alerts_back_navigation,
-    toggle_weather_notifications  # Добавляем новую функцию
-)
 from handlers_ai import show_ai_chat, handle_ai_message, show_ai_examples
 from db import clear_user_alerts
 
-
-# handlers_text.py - добавляем обработку новой кнопки
 async def handle_text_messages(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Обработчик текстовых сообщений для reply-меню"""
     try:
         user_message = update.message.text
         user_id = update.effective_user.id
 
-        # ... существующий код ...
+        # Логируем текстовое сообщение
+        log_user_action(user_id, "text_message", {"message": user_message})
+
+        logger.info(f"Получено сообщение: '{user_message}' от пользователя {user_id}")
 
         # Обработка меню уведомлений
         if user_message == "🔔 Уведомления":
             logger.info(f"Пользователь {user_id} нажал кнопку Уведомления")
+            from handlers_alerts import show_alerts_menu
             await show_alerts_menu(update, context)
             return
 
         elif user_message == "💱 Создать уведомление":
             logger.info(f"Пользователь {user_id} нажал кнопку Создать уведомление")
+            from handlers_alerts import start_create_alert
             await start_create_alert(update, context)
             return
 
         elif user_message == "📋 Мои уведомления":
             logger.info(f"Пользователь {user_id} нажал кнопку Мои уведомления")
+            from handlers_alerts import myalerts_command
             await myalerts_command(update, context)
             return
 
-        elif user_message == "🌤️ Погода (вкл/выкл)":  # Новая кнопка
+        elif user_message == "🌤️ Погода (вкл/выкл)":
             logger.info(f"Пользователь {user_id} нажал кнопку Погода (вкл/выкл)")
+            from handlers_alerts import toggle_weather_notifications
             await toggle_weather_notifications(update, context)
             return
 
@@ -56,7 +55,6 @@ async def handle_text_messages(update: Update, context: ContextTypes.DEFAULT_TYP
             )
             return
 
-
         elif user_message == "🔙 Главное меню":
             logger.info(f"Пользователь {user_id} нажал кнопку Главное меню")
             clear_user_context(context)
@@ -69,26 +67,31 @@ async def handle_text_messages(update: Update, context: ContextTypes.DEFAULT_TYP
             logger.info(f"Пользователь {user_id} в процессе создания уведомления, этап: {alert_stage}")
 
             if alert_stage == 'select_currency':
+                from handlers_alerts import handle_currency_selection
                 await handle_currency_selection(update, context)
                 return
 
             elif alert_stage == 'select_direction':
+                from handlers_alerts import handle_direction_selection
                 await handle_direction_selection(update, context)
                 return
 
             elif alert_stage == 'enter_threshold':
+                from handlers_alerts import handle_threshold_input
                 await handle_threshold_input(update, context)
                 return
 
         # Обработка навигации назад
         if user_message == "🔙 Назад к уведомлениям":
             logger.info(f"Пользователь {user_id} нажал Назад к уведомлениям")
+            from handlers_alerts import show_alerts_menu
             await show_alerts_menu(update, context)
             return
 
         elif user_message == "🔙 Назад к валютам":
             logger.info(f"Пользователь {user_id} нажал Назад к валютам")
             context.user_data['alert_stage'] = 'select_currency'
+            from handlers_alerts import start_create_alert
             await start_create_alert(update, context)
             return
 
@@ -97,8 +100,10 @@ async def handle_text_messages(update: Update, context: ContextTypes.DEFAULT_TYP
             currency = context.user_data.get('alert_currency')
             if currency:
                 context.user_data['alert_stage'] = 'select_direction'
+                from handlers_alerts import handle_currency_selection
                 await handle_currency_selection(update, context)
             else:
+                from handlers_alerts import start_create_alert
                 await start_create_alert(update, context)
             return
 
@@ -118,13 +123,10 @@ async def handle_text_messages(update: Update, context: ContextTypes.DEFAULT_TYP
         elif user_message == "❓ Помощь":
             await help_command(update, context)
         elif user_message == "📊 Статистика":
-            from handlers_basic import show_bot_stats
             await show_bot_stats(update, context)
         elif user_message == "⚙️ Настройки":
-            from handlers_basic import show_settings
             await show_settings(update, context)
         elif user_message == "ℹ️ О боте":
-            from handlers_basic import show_bot_about
             await show_bot_about(update, context)
         elif user_message == "💡 Примеры вопросов":
             await show_ai_examples(update, context)
