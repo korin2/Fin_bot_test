@@ -9,13 +9,13 @@ async def split_long_message(text: str, max_length: int = 4096) -> list:
     """Разбивает длинное сообщение на части для Telegram"""
     if len(text) <= max_length:
         return [text]
-    
+
     parts = []
     while text:
         if len(text) <= max_length:
             parts.append(text)
             break
-        
+
         split_pos = text.rfind('\n', 0, max_length)
         if split_pos == -1:
             split_pos = text.rfind('.', 0, max_length)
@@ -23,10 +23,10 @@ async def split_long_message(text: str, max_length: int = 4096) -> list:
             split_pos = text.rfind(' ', 0, max_length)
         if split_pos == -1:
             split_pos = max_length
-        
+
         parts.append(text[:split_pos + 1])
         text = text[split_pos + 1:]
-    
+
     return parts
 
 def create_back_button():
@@ -44,37 +44,42 @@ def log_user_action(user_id: int, action: str, details: dict = None):
     }
     logger.info(f"USER_ACTION: {json.dumps(log_entry)}")
 
+
 def create_main_reply_keyboard():
     """Создает главное reply-меню"""
     keyboard = [
         [
-            KeyboardButton("💱 Курсы валют"), 
+            KeyboardButton("💱 Курсы валют"),
             KeyboardButton("₿ Криптовалюты")
         ],
         [
-            KeyboardButton("💎 Ключевая ставка"), 
+            KeyboardButton("💎 Ключевая ставка"),
             KeyboardButton("🤖 ИИ помощник")
         ],
         [
-            KeyboardButton("🔔 Уведомления"), 
-            KeyboardButton("🌤️ Погода")
+            KeyboardButton("🔔 Уведомления"),
+            # Убрали "🌤️ Погода" отсюда - теперь она в "Другие функции"
         ],
         [
-            KeyboardButton("🔧 Другие функции"), 
+            KeyboardButton("🔧 Другие функции"),
             KeyboardButton("❓ Помощь")
         ]
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
+# utils.py - обновляем create_other_functions_keyboard
 def create_other_functions_keyboard():
     """Создает клавиатуру для раздела 'Другие функции'"""
     keyboard = [
         [
-            KeyboardButton("📊 Статистика"), 
-            KeyboardButton("⚙️ Настройки")
+            KeyboardButton("🌤️ Погода"),  # Добавили сюда
+            KeyboardButton("📊 Статистика")
         ],
         [
-            KeyboardButton("ℹ️ О боте"), 
+            KeyboardButton("⚙️ Настройки"),
+            KeyboardButton("ℹ️ О боте")
+        ],
+        [
             KeyboardButton("🔙 Главное меню")
         ]
     ]
@@ -101,16 +106,16 @@ def create_alerts_keyboard():
 def create_currency_selection_keyboard():
     """Создает клавиатуру для выбора валюты"""
     from config import SUPPORTED_CURRENCIES
-    
+
     keyboard = []
     row = []
-    
+
     for i, currency in enumerate(SUPPORTED_CURRENCIES):
         row.append(KeyboardButton(currency))
         if len(row) == 3 or i == len(SUPPORTED_CURRENCIES) - 1:
             keyboard.append(row)
             row = []
-    
+
     keyboard.append([KeyboardButton("🔙 Назад к уведомлениям")])
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
