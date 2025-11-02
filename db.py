@@ -11,7 +11,7 @@ async def init_db():
     """Инициализация базы данных и создание таблиц"""
     try:
         conn = await asyncpg.connect(DATABASE_URL)
-        
+
         # Создаем таблицу users
         await conn.execute('''
             CREATE TABLE IF NOT EXISTS users (
@@ -21,7 +21,7 @@ async def init_db():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         ''')
-        
+
         # Создаем таблицу alerts
         await conn.execute('''
             CREATE TABLE IF NOT EXISTS alerts (
@@ -36,27 +36,27 @@ async def init_db():
                 FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
             );
         ''')
-        
+
         # Проверяем существование колонки is_active и добавляем если нет
         try:
             # Проверяем существование колонки
             result = await conn.fetchval('''
-                SELECT column_name 
-                FROM information_schema.columns 
+                SELECT column_name
+                FROM information_schema.columns
                 WHERE table_name='alerts' AND column_name='is_active'
             ''')
-            
+
             if result is None:
                 # Добавляем колонку is_active если её нет
                 await conn.execute('ALTER TABLE alerts ADD COLUMN is_active BOOLEAN DEFAULT TRUE')
                 print("Колонка is_active добавлена в таблицу alerts")
             else:
                 print("Колонка is_active уже существует")
-                
+
         except Exception as e:
             print(f"Ошибка при проверке/добавлении колонки is_active: {e}")
             # Если не удалось проверить, просто продолжаем
-        
+
         await conn.close()
         print("Таблицы созданы успешно")
     except Exception as e:
@@ -117,20 +117,20 @@ async def get_user_alerts(user_id: int):
     """Получение уведомлений пользователя"""
     try:
         conn = await asyncpg.connect(DATABASE_URL)
-        
+
         # Сначала проверяем существование колонки is_active
         try:
             alerts = await conn.fetch(
-                'SELECT * FROM alerts WHERE user_id = $1 AND is_active = TRUE ORDER BY created_at DESC', 
+                'SELECT * FROM alerts WHERE user_id = $1 AND is_active = TRUE ORDER BY created_at DESC',
                 user_id
             )
         except asyncpg.exceptions.UndefinedColumnError:
             # Если колонки is_active нет, получаем все активные уведомления
             alerts = await conn.fetch(
-                'SELECT * FROM alerts WHERE user_id = $1 ORDER BY created_at DESC', 
+                'SELECT * FROM alerts WHERE user_id = $1 ORDER BY created_at DESC',
                 user_id
             )
-        
+
         await conn.close()
         return alerts
     except Exception as e:
@@ -151,14 +151,14 @@ async def deactivate_alert(alert_id: int):
     """Деактивация уведомления (помечаем как неактивное)"""
     try:
         conn = await asyncpg.connect(DATABASE_URL)
-        
+
         # Сначала проверяем существование колонки is_active
         try:
             await conn.execute('UPDATE alerts SET is_active = FALSE WHERE id = $1', alert_id)
         except asyncpg.exceptions.UndefinedColumnError:
             # Если колонки is_active нет, удаляем уведомление
             await conn.execute('DELETE FROM alerts WHERE id = $1', alert_id)
-        
+
         await conn.close()
     except Exception as e:
         print(f"Ошибка при деактивации уведомления: {e}")
@@ -168,14 +168,14 @@ async def get_all_active_alerts():
     """Получение всех активных уведомлений"""
     try:
         conn = await asyncpg.connect(DATABASE_URL)
-        
+
         # Сначала проверяем существование колонки is_active
         try:
             alerts = await conn.fetch('SELECT * FROM alerts WHERE is_active = TRUE')
         except asyncpg.exceptions.UndefinedColumnError:
             # Если колонки is_active нет, получаем все уведомления
             alerts = await conn.fetch('SELECT * FROM alerts')
-        
+
         await conn.close()
         return alerts
     except Exception as e:
@@ -208,6 +208,108 @@ async def get_connection():
 async def get_user_alerts(user_id: int):
     async with get_connection() as conn:
         return await conn.fetch(
-            'SELECT * FROM alerts WHERE user_id = $1 AND is_active = TRUE', 
+            'SELECT * FROM alerts WHERE user_id = $1 AND is_active = TRUE',
             user_id
         )
+
+# db.py - добавляем новую таблицу
+async def init_db():
+    """Инициализация базы данных и создание таблиц"""
+    try:
+        conn = await asyncpg.connect(DATABASE_URL)
+
+        # Существующие таблицы...
+
+        # Создаем таблицу user_settings для хранения настроек
+        await conn.execute('''
+            CREATE TABLE IF NOT EXISTS user_settings (
+                user_id BIGINT PRIMARY KEY,
+                weather_notifications BOOLEAN DEFAULT TRUE,
+                currency_notifications BOOLEAN DEFAULT TRUE,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+            );
+        ''')
+
+        await conn.close()
+        print("Таблицы созданы успешно")
+    except Exception as e:
+        print(f"Ошибка при создании таблиц: {e}")
+        raise
+
+# Добавляем функции для работы с настройками
+async def get_user_settings(user_id: int):
+    """Получает настройки пользователя"""
+    try:
+        conn = await asyncpg.connect(DATABASE_URL)
+        settings = await conn.fetchrow(
+            'SELECT * FROM user_settings WHERE user_id = $1',
+            user_id
+        )
+        await conn.close()
+
+        if settings:
+            return dict(settings)
+        else:
+            # Создаем настройки по умолчанию
+            return await create_default_settings(user_id)
+
+    except Exception as e:
+        print(f"Ошибка при получении настроек пользователя: {e}")
+        return await create_default_settings(user_id)
+
+async def create_default_settings(user_id: int):
+    """Создает настройки по умолчанию для пользователя"""
+    try:
+        conn = await asyncpg.connect(DATABASE_URL)
+        await conn.execute('''
+            INSERT INTO user_settings (user_id, weather_notifications, currency_notifications)
+            VALUES ($1, $2, $3)
+            ON CONFLICT (user_id) DO NOTHING
+        ''', user_id, True, True)
+        await conn.close()
+
+        return {
+            'user_id': user_id,
+            'weather_notifications': True,
+            'currency_notifications': True
+        }
+    except Exception as e:
+        print(f"Ошибка при создании настроек по умолчанию: {e}")
+        return {
+            'user_id': user_id,
+            'weather_notifications': True,
+            'currency_notifications': True
+        }
+
+async def update_weather_notifications(user_id: int, enabled: bool):
+    """Обновляет настройки уведомлений о погоде"""
+    try:
+        conn = await asyncpg.connect(DATABASE_URL)
+        await conn.execute('''
+            INSERT INTO user_settings (user_id, weather_notifications, updated_at)
+            VALUES ($1, $2, CURRENT_TIMESTAMP)
+            ON CONFLICT (user_id)
+            DO UPDATE SET
+                weather_notifications = $2,
+                updated_at = CURRENT_TIMESTAMP
+        ''', user_id, enabled)
+        await conn.close()
+        return True
+    except Exception as e:
+        print(f"Ошибка при обновлении настроек погоды: {e}")
+        return False
+
+async def get_users_with_weather_notifications():
+    """Получает всех пользователей с включенными уведомлениями о погоде"""
+    try:
+        conn = await asyncpg.connect(DATABASE_URL)
+        users = await conn.fetch('''
+            SELECT user_id FROM user_settings
+            WHERE weather_notifications = TRUE
+        ''')
+        await conn.close()
+        return [user['user_id'] for user in users]
+    except Exception as e:
+        print(f"Ошибка при получении пользователей с уведомлениями о погоде: {e}")
+        return []

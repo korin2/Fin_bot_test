@@ -119,10 +119,14 @@ def create_currency_selection_keyboard():
     keyboard.append([KeyboardButton("🔙 Назад к уведомлениям")])
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
-def create_alert_direction_keyboard():
-    """Создает клавиатуру для выбора направления уведомления"""
+# utils.py - обновляем create_alerts_keyboard
+def create_alerts_keyboard():
+    """Создает клавиатуру для раздела уведомлений"""
     keyboard = [
-        [KeyboardButton("📈 Выше порога"), KeyboardButton("📉 Ниже порога")],
-        [KeyboardButton("🔙 Назад к валютам")]
+        [KeyboardButton("💱 Создать уведомление")],
+        [KeyboardButton("📋 Мои уведомления")],
+        [KeyboardButton("🌤️ Погода (вкл/выкл)")],  # Новая кнопка
+        [KeyboardButton("🗑 Очистить все уведомления")],
+        [KeyboardButton("🔙 Главное меню")]
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)

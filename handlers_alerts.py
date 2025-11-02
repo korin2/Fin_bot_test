@@ -6,28 +6,43 @@ from utils import log_user_action, create_alerts_keyboard, create_currency_selec
 from db import get_user_alerts, clear_user_alerts, add_alert
 # Обновляем импорт
 from api_currency import get_currency_rates_with_tomorrow
+# handlers_alerts.py - добавляем импорты
+from db import get_user_settings, update_weather_notifications, get_users_with_weather_notifications
 
+# handlers_alerts.py - обновляем show_alerts_menu
 async def show_alerts_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Показывает меню уведомлений"""
     try:
         user_id = update.effective_user.id
         log_user_action(user_id, "view_alerts_menu")
-        
+
+        # Получаем текущие настройки для отображения статуса
+        settings = await get_user_settings(user_id)
+        weather_status = "✅ ВКЛ" if settings.get('weather_notifications', True) else "❌ ВЫКЛ"
+
         message = (
             "🔔 <b>УПРАВЛЕНИЕ УВЕДОМЛЕНИЯМИ</b>\n\n"
-            "Здесь вы можете создавать и управлять уведомлениями о курсах валют.\n\n"
-            "💡 <b>Как это работает:</b>\n"
-            "• Бот проверяет курсы каждые 30 минут\n"
-            "• При срабатывании условия вы получаете уведомление\n"
-            "• Уведомление автоматически удаляется после срабатывания\n\n"
-            "👇 <b>Выберите действие:</b>"
+
+            "📊 <b>Текущие настройки:</b>\n"
+            f"• Ежедневная погода: <b>{weather_status}</b>\n\n"
+
+            "💡 <b>Доступные действия:</b>\n"
+            "• <b>Создать уведомление</b> - алерты по курсам валют\n"
+            "• <b>Мои уведомления</b> - просмотр активных алертов\n"
+            "• <b>Погода (вкл/выкл)</b> - управление ежедневной рассылкой\n"
+            "• <b>Очистить все</b> - удалить все алерты\n\n"
+
+            "⏰ <b>Расписание рассылок:</b>\n"
+            "• Погода: ежедневно в 10:00 МСК\n"
+            "• Курсы валют: ежедневно в 15:00 МСК\n"
+            "• Проверка алертов: каждые 30 минут"
         )
-        
+
         reply_markup = create_alerts_keyboard()
         logger.info(f"Отправка меню уведомлений пользователю {user_id}")
-        
+
         await update.message.reply_text(message, parse_mode='HTML', reply_markup=reply_markup)
-            
+
     except Exception as e:
         logger.error(f"Ошибка при показе меню уведомлений: {e}")
         await update.message.reply_text("❌ Ошибка при загрузке меню уведомлений.", reply_markup=create_main_reply_keyboard())
@@ -37,22 +52,22 @@ async def start_create_alert(update: Update, context: ContextTypes.DEFAULT_TYPE)
     try:
         user_id = update.effective_user.id
         log_user_action(user_id, "start_create_alert")
-        
+
         # Сохраняем состояние создания уведомления
         context.user_data['creating_alert'] = True
         context.user_data['alert_stage'] = 'select_currency'
-        
+
         message = (
             "💱 <b>СОЗДАНИЕ УВЕДОМЛЕНИЯ</b>\n\n"
             "📝 <b>Шаг 1 из 3:</b> Выберите валюту\n\n"
             "👇 <b>Выберите валюту из списка:</b>"
         )
-        
+
         reply_markup = create_currency_selection_keyboard()
         logger.info(f"Начало создания уведомления для пользователя {user_id}")
-        
+
         await update.message.reply_text(message, parse_mode='HTML', reply_markup=reply_markup)
-            
+
     except Exception as e:
         logger.error(f"Ошибка при начале создания уведомления: {e}")
         await update.message.reply_text("❌ Ошибка при создании уведомления.", reply_markup=create_alerts_keyboard())
@@ -61,29 +76,29 @@ async def handle_currency_selection(update: Update, context: ContextTypes.DEFAUL
     """Обрабатывает выбор валюты для уведомления"""
     try:
         selected_currency = update.message.text
-        
+
         # Сначала проверяем навигационные кнопки
         if selected_currency == "🔙 Назад к уведомлениям":
             await handle_alerts_back_navigation(update, context)
             return
-        
+
         if selected_currency not in SUPPORTED_CURRENCIES:
             await update.message.reply_text(
                 "❌ Пожалуйста, выберите валюту из списка ниже:",
                 reply_markup=create_currency_selection_keyboard()
             )
             return
-        
+
         # Сохраняем выбранную валюту
         context.user_data['alert_currency'] = selected_currency
         context.user_data['alert_stage'] = 'select_direction'
-        
+
         # Получаем текущий курс для информации
         rates_today, _, _, _ = get_currency_rates_with_tomorrow()
         current_rate = "N/A"
         if rates_today and selected_currency in rates_today:
             current_rate = f"{rates_today[selected_currency]['value']:.2f}"
-        
+
         message = (
             f"💱 <b>СОЗДАНИЕ УВЕДОМЛЕНИЯ</b>\n\n"
             f"📝 <b>Шаг 2 из 3:</b> Выберите условие\n\n"
@@ -93,10 +108,10 @@ async def handle_currency_selection(update: Update, context: ContextTypes.DEFAUL
             f"• <b>Выше порога</b> - уведомит когда курс ПРЕВЫСИТ указанное значение\n"
             f"• <b>Ниже порога</b> - уведомит когда курс СТАНЕТ НИЖЕ указанного значения"
         )
-        
+
         reply_markup = create_alert_direction_keyboard()
         await update.message.reply_text(message, parse_mode='HTML', reply_markup=reply_markup)
-            
+
     except Exception as e:
         logger.error(f"Ошибка при выборе валюты: {e}")
         await update.message.reply_text("❌ Ошибка при выборе валюты.", reply_markup=create_alerts_keyboard())
@@ -105,12 +120,12 @@ async def handle_direction_selection(update: Update, context: ContextTypes.DEFAU
     """Обрабатывает выбор направления уведомления"""
     try:
         direction_text = update.message.text
-        
+
         # Сначала проверяем навигационные кнопки
         if direction_text == "🔙 Назад к валютам":
             await handle_alerts_back_navigation(update, context)
             return
-        
+
         if direction_text == "📈 Выше порога":
             direction = 'above'
             direction_display = 'выше'
@@ -123,14 +138,14 @@ async def handle_direction_selection(update: Update, context: ContextTypes.DEFAU
                 reply_markup=create_alert_direction_keyboard()
             )
             return
-        
+
         # Сохраняем направление
         context.user_data['alert_direction'] = direction
         context.user_data['alert_direction_display'] = direction_display
         context.user_data['alert_stage'] = 'enter_threshold'
-        
+
         currency = context.user_data['alert_currency']
-        
+
         message = (
             f"💱 <b>СОЗДАНИЕ УВЕДОМЛЕНИЯ</b>\n\n"
             f"📝 <b>Шаг 3 из 3:</b> Укажите пороговое значение\n\n"
@@ -139,12 +154,12 @@ async def handle_direction_selection(update: Update, context: ContextTypes.DEFAU
             f"💰 <b>Введите пороговое значение в рублях:</b>\n\n"
             f"💡 <i>Пример: 85.50 или 90</i>"
         )
-        
+
         keyboard = [[KeyboardButton("🔙 Назад к условиям")]]
         reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-        
+
         await update.message.reply_text(message, parse_mode='HTML', reply_markup=reply_markup)
-            
+
     except Exception as e:
         logger.error(f"Ошибка при выборе направления: {e}")
         await update.message.reply_text("❌ Ошибка при выборе условия.", reply_markup=create_alerts_keyboard())
@@ -153,12 +168,12 @@ async def handle_threshold_input(update: Update, context: ContextTypes.DEFAULT_T
     """Обрабатывает ввод порогового значения и создает уведомление"""
     try:
         threshold_text = update.message.text
-        
+
         # Проверяем, не является ли сообщение командой назад
         if threshold_text == "🔙 Назад к условиям":
             await handle_alerts_back_navigation(update, context)
             return
-        
+
         # Парсим пороговое значение
         try:
             threshold = float(threshold_text.replace(',', '.'))
@@ -172,30 +187,30 @@ async def handle_threshold_input(update: Update, context: ContextTypes.DEFAULT_T
                 parse_mode='HTML'
             )
             return
-        
+
         # Получаем данные из context
         currency = context.user_data.get('alert_currency')
         direction = context.user_data.get('alert_direction')
         direction_display = context.user_data.get('alert_direction_display')
-        
+
         if not all([currency, direction]):
             await update.message.reply_text(
                 "❌ Произошла ошибка при создании уведомления. Начните заново.",
                 reply_markup=create_alerts_keyboard()
             )
             return
-        
+
         user_id = update.effective_user.id
-        
+
         # Добавляем уведомление в базу данных
         await add_alert(user_id, currency, 'RUB', threshold, direction)
-        
+
         # Получаем текущий курс для информации
         rates_today, _, _, _ = get_currency_rates_with_tomorrow()
         current_rate = "N/A"
         if rates_today and currency in rates_today:
             current_rate = f"{rates_today[currency]['value']:.2f}"
-        
+
         # Формируем сообщение об успехе
         success_message = (
             f"✅ <b>УВЕДОМЛЕНИЕ СОЗДАНО!</b>\n\n"
@@ -207,27 +222,27 @@ async def handle_threshold_input(update: Update, context: ContextTypes.DEFAULT_T
             f"🔔 <i>При срабатывании вы получите сообщение</i>\n"
             f"📋 <i>Все уведомления можно посмотреть в 'Мои уведомления'</i>"
         )
-        
+
         # Очищаем данные создания уведомления
         context.user_data.pop('creating_alert', None)
         context.user_data.pop('alert_stage', None)
         context.user_data.pop('alert_currency', None)
         context.user_data.pop('alert_direction', None)
         context.user_data.pop('alert_direction_display', None)
-        
+
         await update.message.reply_text(
             success_message,
             parse_mode='HTML',
             reply_markup=create_alerts_keyboard()
         )
-        
+
         # Логируем создание уведомления
         log_user_action(user_id, "alert_created", {
             "currency": currency,
             "threshold": threshold,
             "direction": direction
         })
-            
+
     except Exception as e:
         logger.error(f"Ошибка при создании уведомления: {e}")
         await update.message.reply_text(
@@ -240,50 +255,50 @@ async def myalerts_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     try:
         user_id = update.effective_user.id
         log_user_action(user_id, "view_my_alerts")
-        
+
         alerts = await get_user_alerts(user_id)
-        
+
         if not alerts:
             message = (
                 "📭 <b>У вас нет активных уведомлений.</b>\n\n"
                 "💡 Нажмите <b>💱 Создать уведомление</b> чтобы добавить первое уведомление!"
             )
-            
+
             await update.message.reply_text(message, parse_mode='HTML', reply_markup=create_alerts_keyboard())
             return
-        
+
         message = "🔔 <b>ВАШИ АКТИВНЫЕ УВЕДОМЛЕНИЯ</b>\n\n"
-        
+
         for i, alert in enumerate(alerts, 1):
             from_curr = alert['from_currency']
             to_curr = alert['to_currency']
             threshold = alert['threshold']
             direction = alert['direction']
-            
+
             # Получаем текущий курс для сравнения
             rates_today, _, _, _ = get_currency_rates_with_tomorrow()
             current_rate = "N/A"
             if rates_today and from_curr in rates_today:
                 current_rate = f"{rates_today[from_curr]['value']:.2f}"
-            
+
             direction_display = 'выше' if direction == 'above' else 'ниже'
             status_icon = "🟢" if alert.get('is_active', True) else "🔴"
-            
+
             message += (
                 f"{status_icon} <b>{i}. {from_curr} → {to_curr}</b>\n"
                 f"   🎯 Порог: <b>{threshold} руб.</b>\n"
                 f"   📊 Условие: курс <b>{direction_display}</b> {threshold} руб.\n"
                 f"   💱 Текущий курс: <b>{current_rate} руб.</b>\n\n"
             )
-        
+
         message += (
             "⏰ <i>Уведомления проверяются каждые 30 минут автоматически</i>\n"
             "💡 <i>При срабатывании уведомление автоматически удаляется</i>"
         )
-        
+
         reply_markup = create_alerts_keyboard()
         await update.message.reply_text(message, parse_mode='HTML', reply_markup=reply_markup)
-        
+
     except Exception as e:
         logger.error(f"Ошибка в команде /myalerts: {e}")
         error_message = "❌ <b>Ошибка при получении уведомлений.</b>"
@@ -293,9 +308,9 @@ async def alert_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     """Создание уведомления о курсе валюты через команду"""
     try:
         log_user_action(update.effective_user.id, "create_alert", {"args": context.args})
-        
+
         args = context.args
-        
+
         if len(args) != 4:
             await update.message.reply_text(
                 "📝 <b>Использование:</b> /alert &lt;из&gt; &lt;в&gt; &lt;порог&gt; &lt;above|below&gt;\n\n"
@@ -307,9 +322,9 @@ async def alert_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
                 reply_markup=create_main_reply_keyboard()
             )
             return
-        
+
         from_curr, to_curr = args[0].upper(), args[1].upper()
-        
+
         # Проверяем поддерживаемые валюты
         supported_currencies = ['USD', 'EUR', 'GBP', 'JPY', 'CNY', 'CHF', 'CAD', 'AUD', 'TRY', 'KZT', 'AED']
         if from_curr not in supported_currencies:
@@ -320,7 +335,7 @@ async def alert_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
                 reply_markup=create_main_reply_keyboard()
             )
             return
-        
+
         # Проверяем, что целевая валюта - RUB
         if to_curr != 'RUB':
             await update.message.reply_text(
@@ -330,7 +345,7 @@ async def alert_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
                 reply_markup=create_main_reply_keyboard()
             )
             return
-        
+
         try:
             threshold = float(args[2])
             if threshold <= 0:
@@ -341,7 +356,7 @@ async def alert_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
                 reply_markup=create_main_reply_keyboard()
             )
             return
-        
+
         direction = args[3].lower()
         if direction not in ['above', 'below']:
             await update.message.reply_text(
@@ -349,18 +364,18 @@ async def alert_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
                 reply_markup=create_main_reply_keyboard()
             )
             return
-        
+
         user_id = update.effective_message.from_user.id
-        
+
         # Добавляем уведомление
         await add_alert(user_id, from_curr, to_curr, threshold, direction)
-        
+
         # Получаем текущий курс для информации
         rates_today, _, _, _ = get_currency_rates_with_tomorrow()
         current_rate = "N/A"
         if rates_today and from_curr in rates_today:
             current_rate = f"{rates_today[from_curr]['value']:.2f}"
-        
+
         success_message = (
             f"✅ <b>УВЕДОМЛЕНИЕ УСТАНОВЛЕНО!</b>\n\n"
             f"💱 <b>Пара:</b> {from_curr}/{to_curr}\n"
@@ -370,13 +385,13 @@ async def alert_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             f"💡 Уведомление будет проверяться каждые 30 минут\n"
             f"🔔 При срабатывании вы получите сообщение"
         )
-        
+
         await update.message.reply_text(
             success_message,
             parse_mode='HTML',
             reply_markup=create_main_reply_keyboard()
         )
-        
+
     except Exception as e:
         logger.error(f"Ошибка в команде /alert: {e}")
         await update.message.reply_text(
@@ -389,7 +404,7 @@ async def handle_alerts_back_navigation(update: Update, context: ContextTypes.DE
     """Обрабатывает навигацию назад в процессе создания уведомления"""
     try:
         back_text = update.message.text
-        
+
         if back_text == "🔙 Назад к уведомлениям":
             await show_alerts_menu(update, context)
         elif back_text == "🔙 Назад к валютам":
@@ -402,7 +417,102 @@ async def handle_alerts_back_navigation(update: Update, context: ContextTypes.DE
                 await handle_currency_selection(update, context)
             else:
                 await start_create_alert(update, context)
-                
+
     except Exception as e:
         logger.error(f"Ошибка при навигации назад: {e}")
         await update.message.reply_text("❌ Ошибка навигации.", reply_markup=create_alerts_keyboard())
+
+# handlers_alerts.py - добавляем новый обработчик
+async def toggle_weather_notifications(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Включает/выключает ежедневные уведомления о погоде"""
+    try:
+        user_id = update.effective_user.id
+        log_user_action(user_id, "toggle_weather_notifications")
+
+        # Получаем текущие настройки
+        settings = await get_user_settings(user_id)
+        current_status = settings.get('weather_notifications', True)
+
+        # Меняем статус на противоположный
+        new_status = not current_status
+        success = await update_weather_notifications(user_id, new_status)
+
+        if success:
+            status_text = "включены" if new_status else "выключены"
+            status_icon = "✅" if new_status else "❌"
+
+            message = (
+                f"{status_icon} <b>УВЕДОМЛЕНИЯ О ПОГОДЕ</b>\n\n"
+                f"Ежедневные уведомления о погоде <b>{status_text}</b>.\n\n"
+            )
+
+            if new_status:
+                message += (
+                    "🌅 <b>Расписание:</b>\n"
+                    "• Ежедневно в 10:00 по московскому времени\n"
+                    "• Погода в Москве с рекомендациями\n"
+                    "• Автоматическая рассылка\n\n"
+                    "💡 Вы будете получать уведомления каждый день в 10:00 утра"
+                )
+            else:
+                message += (
+                    "🔕 <b>Уведомления отключены</b>\n\n"
+                    "💡 Вы можете включить их снова в любое время"
+                )
+        else:
+            message = "❌ <b>Ошибка при изменении настроек</b>\n\nПопробуйте позже."
+
+        await update.message.reply_text(
+            message,
+            parse_mode='HTML',
+            reply_markup=create_alerts_keyboard()
+        )
+
+    except Exception as e:
+        logger.error(f"Ошибка при переключении уведомлений о погоде: {e}")
+        await update.message.reply_text(
+            "❌ Произошла ошибка при изменении настроек.",
+            reply_markup=create_alerts_keyboard()
+        )
+
+async def show_notification_settings(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Показывает текущие настройки уведомлений"""
+    try:
+        user_id = update.effective_user.id
+        log_user_action(user_id, "view_notification_settings")
+
+        settings = await get_user_settings(user_id)
+        weather_status = settings.get('weather_notifications', True)
+        currency_status = settings.get('currency_notifications', True)
+
+        weather_icon = "✅" if weather_status else "❌"
+        currency_icon = "✅" if currency_status else "❌"
+
+        message = (
+            "⚙️ <b>НАСТРОЙКИ УВЕДОМЛЕНИЙ</b>\n\n"
+
+            f"{weather_icon} <b>Ежедневная погода:</b> {'ВКЛЮЧЕНЫ' if weather_status else 'ВЫКЛЮЧЕНЫ'}\n"
+            f"   📅 Рассылка в 10:00 МСК\n\n"
+
+            f"{currency_icon} <b>Ежедневные курсы:</b> {'ВКЛЮЧЕНЫ' if currency_status else 'ВЫКЛЮЧЕНЫ'}\n"
+            f"   📅 Рассылка в 15:00 МСК\n\n"
+
+            "💡 <b>Управление:</b>\n"
+            "• Используйте кнопку '🌤️ Погода (вкл/выкл)' для управления уведомлениями о погоде\n"
+            "• Уведомления о курсах валют всегда включены\n\n"
+
+            "⏰ <i>Все времена указаны по московскому времени</i>"
+        )
+
+        await update.message.reply_text(
+            message,
+            parse_mode='HTML',
+            reply_markup=create_alerts_keyboard()
+        )
+
+    except Exception as e:
+        logger.error(f"Ошибка при показе настроек уведомлений: {e}")
+        await update.message.reply_text(
+            "❌ Ошибка при загрузке настроек.",
+            reply_markup=create_alerts_keyboard()
+        )
