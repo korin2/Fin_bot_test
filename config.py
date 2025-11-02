@@ -52,4 +52,4 @@ SUPPORTED_CURRENCIES = ['USD', 'EUR', 'GBP', 'JPY', 'CNY', 'CHF', 'CAD', 'AUD', 
 WEATHER_CITY = "Moscow"
 
 # Настройки бота
-BOT_VERSION = "1.0.0"
+BOT_VERSION = "1.1.0"
