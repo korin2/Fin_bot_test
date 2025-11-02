@@ -1,3 +1,4 @@
+# handlers_text.py - обновляем импорты
 import logging
 from telegram import Update
 from telegram.ext import ContextTypes
@@ -8,7 +9,8 @@ from handlers_finance import show_currency_rates, show_crypto_rates, show_key_ra
 from handlers_alerts import (
     show_alerts_menu, start_create_alert, myalerts_command,
     handle_currency_selection, handle_direction_selection,
-    handle_threshold_input, handle_alerts_back_navigation
+    handle_threshold_input, handle_alerts_back_navigation,
+    toggle_weather_notifications  # Добавляем новую функцию
 )
 from handlers_ai import show_ai_chat, handle_ai_message, show_ai_examples
 from db import clear_user_alerts
