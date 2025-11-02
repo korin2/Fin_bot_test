@@ -44,7 +44,6 @@ def log_user_action(user_id: int, action: str, details: dict = None):
     }
     logger.info(f"USER_ACTION: {json.dumps(log_entry)}")
 
-
 def create_main_reply_keyboard():
     """Создает главное reply-меню"""
     keyboard = [
@@ -67,7 +66,6 @@ def create_main_reply_keyboard():
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
-# utils.py - обновляем create_other_functions_keyboard
 def create_other_functions_keyboard():
     """Создает клавиатуру для раздела 'Другие функции'"""
     keyboard = [
@@ -98,6 +96,7 @@ def create_alerts_keyboard():
     keyboard = [
         [KeyboardButton("💱 Создать уведомление")],
         [KeyboardButton("📋 Мои уведомления")],
+        [KeyboardButton("🌤️ Погода (вкл/выкл)")],  # Новая кнопка
         [KeyboardButton("🗑 Очистить все уведомления")],
         [KeyboardButton("🔙 Главное меню")]
     ]
@@ -119,14 +118,10 @@ def create_currency_selection_keyboard():
     keyboard.append([KeyboardButton("🔙 Назад к уведомлениям")])
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
-# utils.py - обновляем create_alerts_keyboard
-def create_alerts_keyboard():
-    """Создает клавиатуру для раздела уведомлений"""
+def create_alert_direction_keyboard():
+    """Создает клавиатуру для выбора направления уведомления"""
     keyboard = [
-        [KeyboardButton("💱 Создать уведомление")],
-        [KeyboardButton("📋 Мои уведомления")],
-        [KeyboardButton("🌤️ Погода (вкл/выкл)")],  # Новая кнопка
-        [KeyboardButton("🗑 Очистить все уведомления")],
-        [KeyboardButton("🔙 Главное меню")]
+        [KeyboardButton("📈 Выше порога"), KeyboardButton("📉 Ниже порога")],
+        [KeyboardButton("🔙 Назад к валютам")]
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
