@@ -15,7 +15,7 @@ from handlers_basic import (
     show_settings, myid_command
 )
 from handlers_finance import (
-    show_currency_rates, show_key_rate, show_crypto_rates, show_weather
+    show_currency_rates, show_key_rate, show_crypto_rates, show_weather, show_cbr_rates
 )
 from handlers_alerts import (
     alert_command, myalerts_command, show_alerts_menu
@@ -74,8 +74,8 @@ def main():
         # Финансовые команды
         application.add_handler(CommandHandler("rates", show_currency_rates))
         application.add_handler(CommandHandler("currency", show_currency_rates))
-        application.add_handler(CommandHandler("cbrrates", show_cbr_rates))
         application.add_handler(CommandHandler("keyrate", show_key_rate))
+        application.add_handler(CommandHandler("cbrrates", show_cbr_rates))
         application.add_handler(CommandHandler("crypto", show_crypto_rates))
         application.add_handler(CommandHandler("weather", show_weather))
 
