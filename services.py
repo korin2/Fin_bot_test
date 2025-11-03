@@ -30,9 +30,11 @@ from api_weather import (
     format_weather_message
 )
 
-from api_ruonia import (  # Добавляем импорт RUONIA
+from api_ruonia import (
     get_ruonia_rate,
-    format_ruonia_message
+    format_ruonia_message,
+    get_ruonia_historical,           # Новая функция
+    format_ruonia_historical_message # Новая функция
 )
 
 from notifications import (
@@ -50,9 +52,10 @@ __all__ = [
     'format_currency_rates_message',
 
     # Key Rate API
-    'get_key_rate',
-    'format_key_rate_message',
-    'format_combined_rates_message',  # Добавляем в экспорт
+    'get_ruonia_rate',
+    'format_ruonia_message',
+    'get_ruonia_historical',           # Новая
+    'format_ruonia_historical_message' # Новая
 
     # Crypto API
     'get_crypto_rates',

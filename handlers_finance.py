@@ -63,29 +63,30 @@ async def show_key_rate(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         logger.error(f"Ошибка при показе ключевой ставки: {e}")
         await update.message.reply_text("❌ Ошибка при получении данных.", reply_markup=create_main_reply_keyboard())
 
-async def show_ruonia_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Показывает только ставку RUONIA"""
+async def show_ruonia_history(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Показывает историю ставки RUONIA"""
     try:
-        log_user_action(update.effective_user.id, "view_ruonia")
+        log_user_action(update.effective_user.id, "view_ruonia_history")
 
         # Показываем сообщение о загрузке
-        loading_message = "🔄 <b>Загружаем данные о ставке RUONIA...</b>"
+        loading_message = "🔄 <b>Загружаем исторические данные RUONIA...</b>"
         await update.message.reply_text(loading_message, parse_mode='HTML')
 
-        ruonia_data = get_ruonia_rate()
+        # Получаем исторические данные (последние 30 дней)
+        historical_data = get_ruonia_historical(days=30)
 
-        if not ruonia_data:
+        if not historical_data:
             await update.message.reply_text(
-                "❌ Не удалось получить данные по ставке RUONIA от ЦБ РФ.",
+                "❌ Не удалось получить исторические данные по ставке RUONIA.",
                 reply_markup=create_main_reply_keyboard()
             )
             return
 
-        message = format_ruonia_message(ruonia_data)
+        message = format_ruonia_historical_message(historical_data)
         await update.message.reply_text(message, parse_mode='HTML', reply_markup=create_main_reply_keyboard())
 
     except Exception as e:
-        logger.error(f"Ошибка при показе ставки RUONIA: {e}")
+        logger.error(f"Ошибка при показе истории RUONIA: {e}")
         await update.message.reply_text("❌ Ошибка при получении данных.", reply_markup=create_main_reply_keyboard())
 
 async def show_crypto_rates(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

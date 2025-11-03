@@ -85,6 +85,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 /crypto - Курсы криптовалют
 /keyrate - Ключевая ставка ЦБ РФ и RUONIA
 /ruonia - Ставка RUONIA
+/ruonia_history - История ставки RUONIA
 /ai - Чат с ИИ помощником
 /myalerts - Мои уведомления
 /alert - Создать уведомление

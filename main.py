@@ -78,7 +78,8 @@ def main():
         application.add_handler(CommandHandler("keyrate", show_key_rate))
         application.add_handler(CommandHandler("crypto", show_crypto_rates))
         application.add_handler(CommandHandler("weather", show_weather))
-        application.add_handler(CommandHandler("ruonia", show_ruonia_command))  # Добавляем новую команду
+        application.add_handler(CommandHandler("ruonia", show_ruonia_command))
+        application.add_handler(CommandHandler("ruonia_history", show_ruonia_history))
 
         # Команды уведомлений
         application.add_handler(CommandHandler("alert", alert_command))
