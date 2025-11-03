@@ -83,7 +83,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 /stop - Завершить работу с ботом
 /rates - Курсы валют ЦБ РФ
 /crypto - Курсы криптовалют
-/keyrate - Ключевая ставка ЦБ РФ
+/keyrate - Ключевая ставка ЦБ РФ и RUONIA
 /ai - Чат с ИИ помощником
 /myalerts - Мои уведомления
 /alert - Создать уведомление
