@@ -1,3 +1,4 @@
+# services.py - проверяем экспорт
 """
 Главный файл сервисов - импортирует все API модули для обратной совместимости
 """
@@ -5,19 +6,15 @@
 # Импортируем все функции из отдельных API модулей
 from api_currency import (
     get_currency_rates_for_date,
-    get_currency_rates_with_tomorrow,  # для обратной совместимости
-    get_currency_rates_with_history,   # новая функция
+    get_currency_rates_with_tomorrow,
+    get_currency_rates_with_history,
     format_currency_rates_message
 )
 
 from api_keyrate import (
     get_key_rate,
-    format_key_rate_message
-)
-
-from api_ruonia import (
-    get_ruonia_rate,
-    format_ruonia_message
+    format_key_rate_message,
+    format_combined_rates_message  # Добавляем новую функцию
 )
 
 from api_crypto import (
@@ -31,6 +28,11 @@ from api_ai import ask_deepseek
 from api_weather import (
     get_weather_moscow,
     format_weather_message
+)
+
+from api_ruonia import (  # Добавляем импорт RUONIA
+    get_ruonia_rate,
+    format_ruonia_message
 )
 
 from notifications import (
@@ -50,10 +52,7 @@ __all__ = [
     # Key Rate API
     'get_key_rate',
     'format_key_rate_message',
-
-    # Ruonia API
-    'get_ruonia_rate',
-    'format_ruonia_message'
+    'format_combined_rates_message',  # Добавляем в экспорт
 
     # Crypto API
     'get_crypto_rates',
@@ -66,6 +65,10 @@ __all__ = [
     # Weather API
     'get_weather_moscow',
     'format_weather_message',
+
+    # Ruonia API
+    'get_ruonia_rate',
+    'format_ruonia_message',
 
     # Notifications
     'check_alerts',
