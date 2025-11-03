@@ -175,7 +175,7 @@ def format_ruonia_historical_message(historical_data: list) -> str:
     if not historical_data:
         return "❌ Не удалось получить исторические данные по ставке RUONIA."
 
-    message = f"📈 <b>ИСТОРИЯ СТАВКИ RUONIA</b>\n\n"
+    message = "📈 <b>ИСТОРИЯ СТАВКИ RUONIA</b>\n\n"
 
     # Показываем последние 10 записей
     for i, data in enumerate(historical_data[:10]):
@@ -204,7 +204,7 @@ def format_ruonia_historical_message(historical_data: list) -> str:
 
         message += f"\n📊 <b>Изменение за день:</b> {change_icon} {change:+.2f}% ({change_percent:+.2f}%)\n"
 
-    message += f"\n📅 <i>Показано последних {min(10, len(historical_data))} из {len(historical_data)} записей</i>"
-    message += f"\n✅ <i>Данные с официального сайта ЦБ РФ</i>"
+    message += f"\n📅 <i>Показано последних {min(10, len(historical_data))} из {len(historical_data)} записей</i>\n"
+    message += "✅ <i>Данные с официального сайта ЦБ РФ</i>"
 
     return message

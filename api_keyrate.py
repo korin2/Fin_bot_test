@@ -155,7 +155,7 @@ def format_combined_rates_message(key_rate_data: dict, ruonia_data: dict = None)
     key_rate = key_rate_data['rate']
     key_source = key_rate_data.get('source', 'unknown')
 
-    message = f"💎 <b>КЛЮЧЕВАЯ СТАВКА ЦБ РФ</b>\n\n"
+    message = "💎 <b>КЛЮЧЕВАЯ СТАВКА ЦБ РФ</b>\n\n"
     message += f"<b>Текущее значение:</b> {key_rate:.2f}%\n"
     message += f"<b>Дата установления:</b> {key_rate_data.get('date', 'неизвестно')}\n\n"
 
@@ -164,7 +164,7 @@ def format_combined_rates_message(key_rate_data: dict, ruonia_data: dict = None)
         ruonia_rate = ruonia_data['rate']
         ruonia_source = ruonia_data.get('source', 'unknown')
 
-        message += f"📊 <b>СТАВКА RUONIA</b>\n"
+        message += "📊 <b>СТАВКА RUONIA</b>\n"
         message += f"<b>Текущее значение:</b> {ruonia_rate:.2f}%\n"
         message += f"<b>Дата:</b> {ruonia_data.get('date', 'неизвестно')}\n\n"
 
