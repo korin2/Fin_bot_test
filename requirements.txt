@@ -7,4 +7,3 @@ lxml==4.9.3
 apscheduler==3.10.4
 psutil==5.9.6
 aiohttp==3.9.1
-cbr-api==1.2.0  # Альтернативная библиотека

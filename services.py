@@ -5,12 +5,9 @@
 # Импортируем все функции из отдельных API модулей
 from api_currency import (
     get_currency_rates_for_date,
-    get_currency_rates_with_tomorrow,
-    get_currency_rates_with_history,
-    format_currency_rates_message,
-    get_currency_dynamics,  # Новая функция
-    get_metal_rates,        # Новая функция
-    get_key_rate_cbr        # Новая функция
+    get_currency_rates_with_tomorrow,  # для обратной совместимости
+    get_currency_rates_with_history,   # новая функция
+    format_currency_rates_message
 )
 
 from api_keyrate import (
@@ -44,26 +41,23 @@ __all__ = [
     'get_currency_rates_with_tomorrow',
     'get_currency_rates_with_history',
     'format_currency_rates_message',
-    'get_currency_dynamics',    # Новая
-    'get_metal_rates',          # Новая
-    'get_key_rate_cbr',         # Новая
-
+    
     # Key Rate API
     'get_key_rate',
     'format_key_rate_message',
-
+    
     # Crypto API
     'get_crypto_rates',
     'get_crypto_rates_fallback',
     'format_crypto_rates_message',
-
+    
     # AI API
     'ask_deepseek',
-
+    
     # Weather API
     'get_weather_moscow',
     'format_weather_message',
-
+    
     # Notifications
     'check_alerts',
     'send_daily_rates',
