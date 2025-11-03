@@ -1,4 +1,4 @@
-# handlers_finance.py - исправляем импорты
+# handlers_finance.py - убедимся, что все функции есть
 import logging
 from telegram import Update
 from telegram.ext import ContextTypes
@@ -8,7 +8,7 @@ from api_currency import get_currency_rates_with_history, format_currency_rates_
 from api_keyrate import get_key_rate, format_key_rate_message, format_combined_rates_message
 from api_crypto import get_crypto_rates, get_crypto_rates_fallback, format_crypto_rates_message
 from api_weather import get_weather_moscow, format_weather_message
-from api_ruonia import get_ruonia_rate, format_ruonia_message  # Добавляем недостающий импорт
+from api_ruonia import get_ruonia_rate, format_ruonia_message, get_ruonia_historical, format_ruonia_historical_message
 
 async def show_currency_rates(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Показывает курсы валют"""
@@ -61,32 +61,6 @@ async def show_key_rate(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
     except Exception as e:
         logger.error(f"Ошибка при показе ключевой ставки: {e}")
-        await update.message.reply_text("❌ Ошибка при получении данных.", reply_markup=create_main_reply_keyboard())
-
-async def show_ruonia_history(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Показывает историю ставки RUONIA"""
-    try:
-        log_user_action(update.effective_user.id, "view_ruonia_history")
-
-        # Показываем сообщение о загрузке
-        loading_message = "🔄 <b>Загружаем исторические данные RUONIA...</b>"
-        await update.message.reply_text(loading_message, parse_mode='HTML')
-
-        # Получаем исторические данные (последние 30 дней)
-        historical_data = get_ruonia_historical(days=30)
-
-        if not historical_data:
-            await update.message.reply_text(
-                "❌ Не удалось получить исторические данные по ставке RUONIA.",
-                reply_markup=create_main_reply_keyboard()
-            )
-            return
-
-        message = format_ruonia_historical_message(historical_data)
-        await update.message.reply_text(message, parse_mode='HTML', reply_markup=create_main_reply_keyboard())
-
-    except Exception as e:
-        logger.error(f"Ошибка при показе истории RUONIA: {e}")
         await update.message.reply_text("❌ Ошибка при получении данных.", reply_markup=create_main_reply_keyboard())
 
 async def show_crypto_rates(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -144,3 +118,54 @@ async def show_weather(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             "❌ Ошибка при получении данных о погоде.",
             reply_markup=create_main_reply_keyboard()
         )
+
+async def show_ruonia_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Показывает только ставку RUONIA"""
+    try:
+        log_user_action(update.effective_user.id, "view_ruonia")
+
+        # Показываем сообщение о загрузке
+        loading_message = "🔄 <b>Загружаем данные о ставке RUONIA...</b>"
+        await update.message.reply_text(loading_message, parse_mode='HTML')
+
+        ruonia_data = get_ruonia_rate()
+
+        if not ruonia_data:
+            await update.message.reply_text(
+                "❌ Не удалось получить данные по ставке RUONIA от ЦБ РФ.",
+                reply_markup=create_main_reply_keyboard()
+            )
+            return
+
+        message = format_ruonia_message(ruonia_data)
+        await update.message.reply_text(message, parse_mode='HTML', reply_markup=create_main_reply_keyboard())
+
+    except Exception as e:
+        logger.error(f"Ошибка при показе ставки RUONIA: {e}")
+        await update.message.reply_text("❌ Ошибка при получении данных.", reply_markup=create_main_reply_keyboard())
+
+async def show_ruonia_history(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Показывает историю ставки RUONIA"""
+    try:
+        log_user_action(update.effective_user.id, "view_ruonia_history")
+
+        # Показываем сообщение о загрузке
+        loading_message = "🔄 <b>Загружаем исторические данные RUONIA...</b>"
+        await update.message.reply_text(loading_message, parse_mode='HTML')
+
+        # Получаем исторические данные (последние 30 дней)
+        historical_data = get_ruonia_historical(days=30)
+
+        if not historical_data:
+            await update.message.reply_text(
+                "❌ Не удалось получить исторические данные по ставке RUONIA.",
+                reply_markup=create_main_reply_keyboard()
+            )
+            return
+
+        message = format_ruonia_historical_message(historical_data)
+        await update.message.reply_text(message, parse_mode='HTML', reply_markup=create_main_reply_keyboard())
+
+    except Exception as e:
+        logger.error(f"Ошибка при показе истории RUONIA: {e}")
+        await update.message.reply_text("❌ Ошибка при получении данных.", reply_markup=create_main_reply_keyboard())
