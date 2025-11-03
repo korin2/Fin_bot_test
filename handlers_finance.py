@@ -122,3 +122,22 @@ async def show_weather(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             "❌ Ошибка при получении данных о погоде.",
             reply_markup=create_main_reply_keyboard()
         )
+
+# handlers_finance.py - добавляем в конец файла
+async def show_ruonia_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Показывает только ставку RUONIA"""
+    try:
+        log_user_action(update.effective_user.id, "view_ruonia")
+
+        # Показываем сообщение о загрузке
+        loading_message = "🔄 <b>Загружаем данные о ставке RUONIA...</b>"
+        await update.message.reply_text(loading_message, parse_mode='HTML')
+
+        ruonia_data = get_ruonia_rate()
+        message = format_ruonia_message(ruonia_data)
+
+        await update.message.reply_text(message, parse_mode='HTML', reply_markup=create_main_reply_keyboard())
+
+    except Exception as e:
+        logger.error(f"Ошибка при показе ставки RUONIA: {e}")
+        await update.message.reply_text("❌ Ошибка при получении данных.", reply_markup=create_main_reply_keyboard())

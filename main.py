@@ -1,4 +1,4 @@
-# main.py
+
 import logging
 import asyncio
 import sys
@@ -7,8 +7,6 @@ from telegram.ext import Application, CommandHandler, CallbackQueryHandler, Mess
 from telegram.error import Conflict
 from config import TOKEN, logger
 from db import init_db
-from api_ruonia import format_ruonia_message, get_ruonia_rate
-
 
 # Импортируем обработчики из новых модулей
 from handlers_basic import (
@@ -17,7 +15,8 @@ from handlers_basic import (
     show_settings, myid_command
 )
 from handlers_finance import (
-    show_currency_rates, show_key_rate, show_crypto_rates, show_weather
+    show_currency_rates, show_key_rate, show_crypto_rates, show_weather,
+    show_ruonia_command  # Добавляем новый импорт
 )
 from handlers_alerts import (
     alert_command, myalerts_command, show_alerts_menu
@@ -52,24 +51,6 @@ def error_handler(update, context):
     except Exception as e:
         logger.error(f"Ошибка в обработчике: {e}")
 
-
-async def show_ruonia_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Показывает только ставку RUONIA"""
-    try:
-        log_user_action(update.effective_user.id, "view_ruonia")
-
-        ruonia_data = get_ruonia_rate()
-        message = format_ruonia_message(ruonia_data)
-
-        await update.message.reply_text(message, parse_mode='HTML', reply_markup=create_main_reply_keyboard())
-
-    except Exception as e:
-        logger.error(f"Ошибка при показе ставки RUONIA: {e}")
-        await update.message.reply_text("❌ Ошибка при получении данных.", reply_markup=create_main_reply_keyboard())
-
-
-
-
 def main():
     """Основная функция запуска бота"""
     try:
@@ -95,9 +76,9 @@ def main():
         application.add_handler(CommandHandler("rates", show_currency_rates))
         application.add_handler(CommandHandler("currency", show_currency_rates))
         application.add_handler(CommandHandler("keyrate", show_key_rate))
-        application.add_handler(CommandHandler("ruonia", show_ruonia_command))
         application.add_handler(CommandHandler("crypto", show_crypto_rates))
         application.add_handler(CommandHandler("weather", show_weather))
+        application.add_handler(CommandHandler("ruonia", show_ruonia_command))  # Добавляем новую команду
 
         # Команды уведомлений
         application.add_handler(CommandHandler("alert", alert_command))
