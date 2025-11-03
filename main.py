@@ -74,6 +74,7 @@ def main():
         # Финансовые команды
         application.add_handler(CommandHandler("rates", show_currency_rates))
         application.add_handler(CommandHandler("currency", show_currency_rates))
+        application.add_handler(CommandHandler("cbrrates", show_cbr_rates))
         application.add_handler(CommandHandler("keyrate", show_key_rate))
         application.add_handler(CommandHandler("crypto", show_crypto_rates))
         application.add_handler(CommandHandler("weather", show_weather))

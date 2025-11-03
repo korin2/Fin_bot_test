@@ -112,7 +112,7 @@ async def handle_text_messages(update: Update, context: ContextTypes.DEFAULT_TYP
             await show_currency_rates(update, context)
         elif user_message == "₿ Криптовалюты":
             await show_crypto_rates(update, context)
-        elif user_message == "💎 Ключевая ставка ЦБ РФ":
+        elif user_message == "🏛️ Ставки ЦБ РФ (ключевая, ruonia)":
             await show_key_rate(update, context)
         elif user_message == "🤖 ИИ помощник":
             await show_ai_chat(update, context)

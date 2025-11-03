@@ -34,6 +34,11 @@ from notifications import (
     send_daily_weather
 )
 
+from api_ruonia import (
+    get_ruonia_rate,
+    format_ruonia_message
+)
+
 # Экспортируем все функции для обратной совместимости
 __all__ = [
     # Currency API
@@ -41,23 +46,27 @@ __all__ = [
     'get_currency_rates_with_tomorrow',
     'get_currency_rates_with_history',
     'format_currency_rates_message',
-    
+
     # Key Rate API
     'get_key_rate',
     'format_key_rate_message',
-    
+
+    # ruonia
+    'get_ruonia_rate',
+    'format_ruonia_message'
+
     # Crypto API
     'get_crypto_rates',
     'get_crypto_rates_fallback',
     'format_crypto_rates_message',
-    
+
     # AI API
     'ask_deepseek',
-    
+
     # Weather API
     'get_weather_moscow',
     'format_weather_message',
-    
+
     # Notifications
     'check_alerts',
     'send_daily_rates',
