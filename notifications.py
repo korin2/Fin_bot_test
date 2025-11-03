@@ -1,8 +1,9 @@
+# notifications.py - добавляем импорт
 import logging
 from telegram.ext import ContextTypes
 from config import logger
-from db import get_all_active_alerts, deactivate_alert, get_all_users
-from api_currency import get_currency_rates_with_tomorrow
+from db import get_all_active_alerts, deactivate_alert, get_all_users, get_users_with_weather_notifications  # Добавляем импорт
+from api_currency import get_currency_rates_with_tomorrow, get_currency_rates_with_history  # Добавляем импорт
 from api_keyrate import get_key_rate
 from api_weather import get_weather_moscow, format_weather_message
 
@@ -136,14 +137,13 @@ async def send_daily_rates(context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logger.error(f"💥 [РАССЫЛКА КУРСОВ] Критическая ошибка: {e}")
 
-# notifications.py - обновляем send_daily_weather
 async def send_daily_weather(context: ContextTypes.DEFAULT_TYPE):
     """Ежедневная рассылка погоды только пользователям с включенными уведомлениями"""
     try:
         logger.info("🔄 [РАССЫЛКА ПОГОДЫ] Функция запущена")
 
         # Получаем только пользователей с включенными уведомлениями о погоде
-        user_ids = await get_users_with_weather_notifications()
+        user_ids = await get_users_with_weather_notifications()  # Теперь эта функция импортирована
         logger.info(f"📊 [РАССЫЛКА ПОГОДЫ] Пользователей с уведомлениями: {len(user_ids)}")
 
         if not user_ids:
