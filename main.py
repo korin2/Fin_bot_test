@@ -1,15 +1,17 @@
+# main.py
 import logging
 import asyncio
 import sys
 import os
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters
+from telegram.error import Conflict
 from config import TOKEN, logger
 from db import init_db
 
 # Импортируем обработчики из новых модулей
 from handlers_basic import (
     start, stop_command, help_command, show_main_menu,
-    show_other_functions, show_bot_stats, show_bot_about, 
+    show_other_functions, show_bot_stats, show_bot_about,
     show_settings, myid_command
 )
 from handlers_finance import (
@@ -28,7 +30,7 @@ async def post_init(application):
     """Инициализация после запуска бота"""
     await init_db()
     logger.info("База данных инициализирована")
-    
+
     # Логируем информацию о здоровье системы
     try:
         from health_check import check_bot_health
@@ -38,6 +40,16 @@ async def post_init(application):
     except Exception as e:
         logger.warning(f"Health check failed: {e}")
 
+def error_handler(update, context):
+    """Обработчик ошибок"""
+    try:
+        raise context.error
+    except Conflict:
+        # Игнорируем ошибки конфликта - значит другой экземпляр уже запущен
+        logger.warning("Обнаружен конфликт - вероятно запущен другой экземпляр бота")
+    except Exception as e:
+        logger.error(f"Ошибка в обработчике: {e}")
+
 def main():
     """Основная функция запуска бота"""
     try:
@@ -45,9 +57,12 @@ def main():
         if not TOKEN:
             logger.error("TELEGRAM_BOT_TOKEN is required")
             sys.exit(1)
-            
+
         # Создаем приложение
         application = Application.builder().token(TOKEN).post_init(post_init).build()
+
+        # Добавляем обработчик ошибок
+        application.add_error_handler(error_handler)
 
         # Регистрация обработчиков команд
         # Основные команды
@@ -55,21 +70,21 @@ def main():
         application.add_handler(CommandHandler("stop", stop_command))
         application.add_handler(CommandHandler("help", help_command))
         application.add_handler(CommandHandler("myid", myid_command))
-        
+
         # Финансовые команды
         application.add_handler(CommandHandler("rates", show_currency_rates))
         application.add_handler(CommandHandler("currency", show_currency_rates))
         application.add_handler(CommandHandler("keyrate", show_key_rate))
         application.add_handler(CommandHandler("crypto", show_crypto_rates))
         application.add_handler(CommandHandler("weather", show_weather))
-        
+
         # Команды уведомлений
         application.add_handler(CommandHandler("alert", alert_command))
         application.add_handler(CommandHandler("myalerts", myalerts_command))
-        
+
         # ИИ команды
         application.add_handler(CommandHandler("ai", show_ai_chat))
-        
+
         # Административные команды
         application.add_handler(CommandHandler("status", status_command))
         application.add_handler(CommandHandler("logs", logs_command))
@@ -83,13 +98,18 @@ def main():
         setup_jobs(application)
 
         logger.info("Бот запускается...")
-        
-        # Запуск бота
-        application.run_polling(
-            drop_pending_updates=True,
-            allowed_updates=['message', 'callback_query']
-        )
-        
+
+        # Запуск бота с обработкой конфликтов
+        try:
+            application.run_polling(
+                drop_pending_updates=True,
+                allowed_updates=['message', 'callback_query'],
+                close_loop=False
+            )
+        except Conflict:
+            logger.warning("Обнаружен конфликт при запуске. Возможно, бот уже запущен.")
+            sys.exit(0)
+
     except Exception as e:
         logger.error(f"Ошибка при запуске бота: {e}")
         sys.exit(1)

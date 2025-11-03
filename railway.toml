@@ -6,7 +6,7 @@ builder = "nixpacks"
 
 [[services]]
 name = "telegram-bot"
-command = "python main.py"
+command = "./run_bot.sh"  # Используем скрипт вместо прямого вызова
 
 [services.env]
 PORT = "8000"
