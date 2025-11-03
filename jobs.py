@@ -24,7 +24,7 @@ def setup_jobs(application):
             # Ежедневная рассылка погоды в 10:00 (07:00 UTC)
             job_queue.run_daily(
                 send_daily_weather,
-                time=datetime.strptime("07:27", "%H:%M").time(),
+                time=datetime.strptime("08:00", "%H:%M").time(),
                 days=(0, 1, 2, 3, 4, 5, 6),
                 name="daily_weather"
             )
