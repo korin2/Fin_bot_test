@@ -50,7 +50,7 @@ async def show_key_rate(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
         if not key_rate_data:
             await update.message.reply_text(
-                "❌ Не удалось получить ключевую ставку.",
+                "❌ Не удалось получить данные по ключевой ставке от ЦБ РФ.",
                 reply_markup=create_main_reply_keyboard()
             )
             return
@@ -61,6 +61,31 @@ async def show_key_rate(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
     except Exception as e:
         logger.error(f"Ошибка при показе ключевой ставки: {e}")
+        await update.message.reply_text("❌ Ошибка при получении данных.", reply_markup=create_main_reply_keyboard())
+
+async def show_ruonia_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Показывает только ставку RUONIA"""
+    try:
+        log_user_action(update.effective_user.id, "view_ruonia")
+
+        # Показываем сообщение о загрузке
+        loading_message = "🔄 <b>Загружаем данные о ставке RUONIA...</b>"
+        await update.message.reply_text(loading_message, parse_mode='HTML')
+
+        ruonia_data = get_ruonia_rate()
+
+        if not ruonia_data:
+            await update.message.reply_text(
+                "❌ Не удалось получить данные по ставке RUONIA от ЦБ РФ.",
+                reply_markup=create_main_reply_keyboard()
+            )
+            return
+
+        message = format_ruonia_message(ruonia_data)
+        await update.message.reply_text(message, parse_mode='HTML', reply_markup=create_main_reply_keyboard())
+
+    except Exception as e:
+        logger.error(f"Ошибка при показе ставки RUONIA: {e}")
         await update.message.reply_text("❌ Ошибка при получении данных.", reply_markup=create_main_reply_keyboard())
 
 async def show_crypto_rates(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -118,21 +143,3 @@ async def show_weather(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             "❌ Ошибка при получении данных о погоде.",
             reply_markup=create_main_reply_keyboard()
         )
-
-async def show_ruonia_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Показывает только ставку RUONIA"""
-    try:
-        log_user_action(update.effective_user.id, "view_ruonia")
-
-        # Показываем сообщение о загрузке
-        loading_message = "🔄 <b>Загружаем данные о ставке RUONIA...</b>"
-        await update.message.reply_text(loading_message, parse_mode='HTML')
-
-        ruonia_data = get_ruonia_rate()
-        message = format_ruonia_message(ruonia_data)
-
-        await update.message.reply_text(message, parse_mode='HTML', reply_markup=create_main_reply_keyboard())
-
-    except Exception as e:
-        logger.error(f"Ошибка при показе ставки RUONIA: {e}")
-        await update.message.reply_text("❌ Ошибка при получении данных.", reply_markup=create_main_reply_keyboard())

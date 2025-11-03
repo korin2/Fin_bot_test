@@ -16,61 +16,105 @@ def get_ruonia_rate():
             'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
         }
 
+        logger.info(f"Запрос к URL: {url}")
         response = requests.get(url, headers=headers, timeout=15)
 
-        if response.status_code == 403:
-            logger.error("Доступ запрещен (403) при парсинге RUONIA")
-            return get_ruonia_demo()
-        elif response.status_code != 200:
+        if response.status_code != 200:
             logger.error(f"Ошибка HTTP {response.status_code} при парсинге RUONIA")
-            return get_ruonia_demo()
+            return None
 
         soup = BeautifulSoup(response.content, 'html.parser')
+        logger.info("HTML получен успешно")
 
-        # Ищем таблицу со ставками RUONIA
+        # Ищем таблицу со ставками RUONIA - пробуем разные селекторы
         table = soup.find('table', class_='data')
+        if not table:
+            table = soup.find('table')
+            logger.info("Таблица найдена без класса")
+
         if table:
+            logger.info("Таблица найдена, начинаем парсинг строк")
             rows = table.find_all('tr')
-            for i in range(1, min(len(rows), 10)):  # Проверяем первые 10 строк
-                cells = rows[i].find_all('td')
+            logger.info(f"Найдено строк в таблице: {len(rows)}")
+
+            # Пропускаем заголовок и ищем данные
+            for i, row in enumerate(rows[1:], 1):  # Пропускаем заголовок
+                cells = row.find_all(['td', 'th'])
+                logger.info(f"Строка {i}: {len(cells)} ячеек")
+
                 if len(cells) >= 2:
-                    date_str = cells[0].get_text(strip=True)
-                    rate_str = cells[1].get_text(strip=True).replace(',', '.')
+                    # Пытаемся получить дату и ставку из разных ячеек
+                    date_str = None
+                    rate_str = None
 
-                    try:
-                        date_obj = datetime.strptime(date_str, '%d.%m.%Y')
-                        # Берем последнюю доступную ставку (не из будущего)
-                        if date_obj <= datetime.now():
-                            rate_value = float(rate_str)
+                    # Пробуем разные варианты структуры таблицы
+                    for j, cell in enumerate(cells):
+                        text = cell.get_text(strip=True)
+                        logger.info(f"  Ячейка {j}: '{text}'")
 
-                            return {
-                                'rate': rate_value,
-                                'date': date_obj.strftime('%d.%m.%Y'),
-                                'is_current': True,
-                                'source': 'cbr_parsed'
-                            }
-                    except ValueError:
-                        continue
+                        # Проверяем, является ли текст датой
+                        if not date_str and is_date(text):
+                            date_str = text
+                        # Проверяем, является ли текст числом (ставкой)
+                        elif not rate_str and is_rate(text):
+                            rate_str = text
 
-        return get_ruonia_demo()
+                    logger.info(f"Найдено: дата='{date_str}', ставка='{rate_str}'")
+
+                    if date_str and rate_str:
+                        try:
+                            date_obj = datetime.strptime(date_str, '%d.%m.%Y')
+                            # Берем последнюю доступную ставку (не из будущего)
+                            if date_obj <= datetime.now():
+                                rate_value = float(rate_str.replace(',', '.'))
+
+                                logger.info(f"Успешно получена ставка RUONIA: {rate_value}% на {date_str}")
+
+                                return {
+                                    'rate': rate_value,
+                                    'date': date_obj.strftime('%d.%m.%Y'),
+                                    'is_current': True,
+                                    'source': 'cbr_parsed'
+                                }
+                        except ValueError as e:
+                            logger.warning(f"Ошибка преобразования данных: {e}")
+                            continue
+
+            logger.error("Не удалось найти валидные данные в таблице")
+        else:
+            logger.error("Таблица не найдена на странице")
+
+        return None
 
     except Exception as e:
         logger.error(f"Ошибка при получении ставки RUONIA: {e}")
-        return get_ruonia_demo()
+        return None
 
-def get_ruonia_demo():
-    """Возвращает демо-данные ставки RUONIA"""
-    return {
-        'rate': 15.8,  # Примерное значение
-        'date': datetime.now().strftime('%d.%m.%Y'),
-        'is_current': True,
-        'source': 'demo'
-    }
+def is_date(text):
+    """Проверяет, является ли текст датой в формате DD.MM.YYYY"""
+    try:
+        if text and len(text) == 10 and text[2] == '.' and text[5] == '.':
+            datetime.strptime(text, '%d.%m.%Y')
+            return True
+    except:
+        pass
+    return False
+
+def is_rate(text):
+    """Проверяет, является ли текст числом (ставкой)"""
+    try:
+        if text and text.replace(',', '').replace('.', '').isdigit():
+            # Проверяем, что это разумное значение ставки (от 1 до 30%)
+            value = float(text.replace(',', '.'))
+            return 1 <= value <= 30
+    except:
+        pass
+    return False
 
 def format_ruonia_message(ruonia_data: dict) -> str:
     """Форматирует сообщение со ставкой RUONIA"""
     if not ruonia_data:
-        return "❌ Не удалось получить данные по ставке RUONIA."
+        return "❌ Не удалось получить данные по ставке RUONIA от ЦБ РФ."
 
     rate = ruonia_data['rate']
     source = ruonia_data.get('source', 'unknown')
@@ -83,7 +127,5 @@ def format_ruonia_message(ruonia_data: dict) -> str:
     # Добавляем информацию об источнике данных
     if source == 'cbr_parsed':
         message += f"\n\n✅ <i>Данные получены с официального сайта ЦБ РФ</i>"
-    elif source == 'demo':
-        message += f"\n\n⚠️ <i>Используются демонстрационные данные (ошибка получения реальных)</i>"
 
     return message
