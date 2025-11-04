@@ -1,18 +1,16 @@
+# handlers_basic.py
 import logging
-from telegram import Update
+from telegram import Update, KeyboardButton, ReplyKeyboardMarkup  # Добавляем импорты
 from telegram.ext import ContextTypes
-from config import logger, DEEPSEEK_API_KEY
-from utils import log_user_action, create_main_reply_keyboard
-# Обновляем импорт
-from api_ai import ask_deepseek
-from db import update_user_info
-
+from config import logger, ADMIN_IDS, BOT_VERSION, BOT_LAST_UPDATE, BOT_CREATION_DATE
+from utils import log_user_action, create_main_reply_keyboard, create_other_functions_keyboard, create_admin_functions_keyboard
+from db import update_user_info  # Добавляем импорт
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Обработчик команды /start - только для первого запуска"""
     try:
         user = update.effective_user
-        await update_user_info(user.id, user.first_name, user.username)
+        await update_user_info(user.id, user.first_name, user.username)  # Теперь функция доступна
 
         log_user_action(user.id, "start_bot")
 
@@ -24,16 +22,18 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             '💡 <b>Основные возможности:</b>\n'
             '• 💱 Курсы валют ЦБ РФ с прогнозом\n'
             '• ₿ Криптовалюты в реальном времени\n'
-            '• 💎 Ключевая ставка ЦБ РФ\n'
+            '• 🏛️ Ставки ЦБ РФ (ключевая ставка и RUONIA)\n'
             '• 🤖 Универсальный ИИ помощник\n'
             '• 🔔 Умные уведомления\n'
-            '• 🌤️ Погода в Москве\n\n'
+            '• 🌅 Ежедневная рассылка\n\n'
             '👇 <b>Выберите действие в меню ниже:</b>'
         )
 
         # Проверяем доступность ИИ
+        from config import DEEPSEEK_API_KEY
         if DEEPSEEK_API_KEY:
             try:
+                from api_ai import ask_deepseek
                 test_ai = await ask_deepseek("test", context, fast_check=True)
                 ai_available = not (test_ai.startswith("❌") or test_ai.startswith("⏰"))
                 if not ai_available:
@@ -72,11 +72,8 @@ async def stop_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         logger.error(f"Ошибка в команде /stop: {e}")
         await update.message.reply_text("❌ Произошла ошибка при завершении работы.")
 
-# handlers_basic.py - исправляем help_command
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Обработчик команды /help"""
-    from config import ADMIN_IDS
-
     help_text = (
         "📚 <b>Доступные команды:</b>\n\n"
 
@@ -105,16 +102,16 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         )
 
     help_text += (
-        "\n 🏛️ <b>Ставки ЦБ РФ:</b>\n"
-        "• Ключевая ставка\n"
-        "• Ставка RUONIA\n"
-        "• Сравнение ставок\n\n"
-
-        "💡 <b>Пример уведомления:</b>\n"
+        "\n💡 <b>Пример уведомления:</b>\n"
         "Бот уведомит когда USD превысит 80 руб.\n\n"
 
         "🌤️ <b>Погода:</b>\n"
         "Ежедневная рассылка в 10:00 МСК\n\n"
+
+        "🏛️ <b>Ставки ЦБ РФ:</b>\n"
+        "• Ключевая ставка\n"
+        "• Ставка RUONIA\n"
+        "• Сравнение ставок\n\n"
 
         "👇 <b>Или используйте кнопки меню ниже!</b>"
     )
@@ -140,7 +137,6 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         logger.error(f"Ошибка при показе главного меню: {e}")
         await update.message.reply_text("❌ Произошла ошибка.", reply_markup=create_main_reply_keyboard())
 
-# handlers_basic.py - обновляем show_other_functions
 async def show_other_functions(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Показывает меню прочих функций"""
     try:
@@ -150,7 +146,12 @@ async def show_other_functions(update: Update, context: ContextTypes.DEFAULT_TYP
             "🔧 <b>ДОПОЛНИТЕЛЬНЫЕ ФУНКЦИИ</b>\n\n"
             "Выберите дополнительную функцию:\n\n"
 
-            "🏛️ <b>Ставки ЦБ РФ:</b>\n"  # Обновляем описание
+            "🌤️ <b>Погода:</b>\n"
+            "• Текущая погода в Москве\n"
+            "• Ежедневная рассылка погоды\n"
+            "• Рекомендации по одежде\n\n"
+
+            "🏛️ <b>Ставки ЦБ РФ:</b>\n"
             "• Ключевая ставка\n"
             "• Ставка RUONIA\n"
             "• Сравнение ставок\n"
@@ -161,11 +162,6 @@ async def show_other_functions(update: Update, context: ContextTypes.DEFAULT_TYP
             "• Графики изменения курсов\n"
             "• Исторические данные\n\n"
 
-            "🌤️ <b>Погода:</b>\n"
-            "• Текущая погода в Москве\n"
-            "• Ежедневная рассылка погоды\n"
-            "• Рекомендации по одежде\n\n"
-
             "⚙️ <b>Настройки:</b>\n"
             "• Настройка уведомлений\n"
             "• Выбор языка\n"
@@ -175,12 +171,31 @@ async def show_other_functions(update: Update, context: ContextTypes.DEFAULT_TYP
             "• Информация о боте\n"
             "• Связь с разработчиком\n"
             "• Отзывы и предложения\n\n"
-
-            "💡 <i>Новые функции добавляются регулярно!</i>"
         )
 
-        from utils import create_other_functions_keyboard
-        reply_markup = create_other_functions_keyboard()
+        # Добавляем секцию для администраторов
+        if update.effective_user.id in ADMIN_IDS:
+            message += (
+                "👑 <b>Административные функции:</b>\n"
+                "• Просмотр системной статистики\n"
+                "• Управление настройками бота\n"
+                "• Доступ к логам системы\n\n"
+            )
+
+        message += "💡 <i>Новые функции добавляются регулярно!</i>"
+
+        # Для администраторов показываем расширенную клавиатуру
+        if update.effective_user.id in ADMIN_IDS:
+            keyboard = [
+                [KeyboardButton("🌤️ Погода"), KeyboardButton("📊 Статистика")],
+                [KeyboardButton("⚙️ Настройки"), KeyboardButton("ℹ️ О боте")],
+                [KeyboardButton("👑 Админ-панель")],  # Новая кнопка для администраторов
+                [KeyboardButton("🔙 Главное меню")]
+            ]
+            reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+        else:
+            reply_markup = create_other_functions_keyboard()
+
         await update.message.reply_text(message, parse_mode='HTML', reply_markup=reply_markup)
 
     except Exception as e:
@@ -225,20 +240,16 @@ async def show_bot_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
         message += "\n💡 <i>Статистика обновляется в реальном времени</i>"
 
-        from utils import create_other_functions_keyboard
         await update.message.reply_text(message, parse_mode='HTML', reply_markup=create_other_functions_keyboard())
 
     except Exception as e:
         logger.error(f"Ошибка при показе статистики: {e}")
         await update.message.reply_text("❌ Ошибка при загрузке статистики.", reply_markup=create_other_functions_keyboard())
 
-# handlers_basic.py - обновляем show_bot_about
 async def show_bot_about(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Показывает информацию о боте"""
     try:
         log_user_action(update.effective_user.id, "view_bot_about")
-
-        from config import BOT_VERSION, BOT_LAST_UPDATE, BOT_CREATION_DATE
 
         message = (
             "ℹ️ <b>ИНФОРМАЦИЯ О БОТЕ</b>\n\n"
@@ -272,7 +283,6 @@ async def show_bot_about(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             f"⭐ <i>Бот (создан в {BOT_CREATION_DATE.lower()}) постоянно развивается и улучшается!</i>"
         )
 
-        from utils import create_other_functions_keyboard
         await update.message.reply_text(message, parse_mode='HTML', reply_markup=create_other_functions_keyboard())
 
     except Exception as e:
@@ -309,7 +319,6 @@ async def show_settings(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             "💡 <i>Настройки будут доступны для изменения в будущих обновлениях</i>"
         )
 
-        from utils import create_other_functions_keyboard
         await update.message.reply_text(message, parse_mode='HTML', reply_markup=create_other_functions_keyboard())
 
     except Exception as e:
@@ -326,3 +335,183 @@ async def myid_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         parse_mode='HTML',
         reply_markup=create_main_reply_keyboard()
     )
+
+async def show_admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Показывает административную панель (только для администраторов)"""
+    try:
+        # Проверяем права администратора
+        if update.effective_user.id not in ADMIN_IDS:
+            await update.message.reply_text(
+                "❌ У вас нет доступа к этой функции.",
+                reply_markup=create_other_functions_keyboard()
+            )
+            return
+
+        log_user_action(update.effective_user.id, "view_admin_panel")
+
+        # Получаем системную информацию
+        import psutil
+        import platform
+        from datetime import datetime
+        from db import get_all_users, get_all_alerts
+
+        users = await get_all_users()
+        alerts = await get_all_alerts()
+        active_alerts = len([alert for alert in alerts if alert.get('is_active', True)])
+
+        # Системная информация
+        system_info = (
+            "👑 <b>АДМИНИСТРАТИВНАЯ ПАНЕЛЬ</b>\n\n"
+
+            "🖥️ <b>Системная информация:</b>\n"
+            f"• OS: {platform.system()} {platform.release()}\n"
+            f"• Python: {platform.python_version()}\n"
+            f"• CPU: {psutil.cpu_percent()}%\n"
+            f"• Memory: {psutil.virtual_memory().percent}%\n"
+            f"• Disk: {psutil.disk_usage('/').percent}%\n\n"
+
+            "🤖 <b>Статистика бота:</b>\n"
+            f"• Пользователей: {len(users)}\n"
+            f"• Всего уведомлений: {len(alerts)}\n"
+            f"• Активных уведомлений: {active_alerts}\n"
+            f"• Администраторов: {len(ADMIN_IDS)}\n\n"
+
+            "📊 <b>API статусы:</b>\n"
+        )
+
+        # Проверяем статусы API
+        from api_currency import get_currency_rates_for_date
+        from api_crypto import get_crypto_rates
+        from config import DEEPSEEK_API_KEY, WEATHER_API_KEY, COINGECKO_API_KEY
+
+        # ЦБ РФ
+        try:
+            rates, _ = get_currency_rates_for_date(datetime.now().strftime('%d/%m/%Y'))
+            system_info += "• ЦБ РФ: ✅ Работает\n"
+        except:
+            system_info += "• ЦБ РФ: ❌ Ошибка\n"
+
+        # CoinGecko
+        crypto_data = get_crypto_rates()
+        if crypto_data and crypto_data.get('source') == 'coingecko':
+            system_info += f"• CoinGecko: ✅ Работает ({'API ключ' if COINGECKO_API_KEY else 'бесплатно'})\n"
+        else:
+            system_info += f"• CoinGecko: ❌ Ошибка\n"
+
+        # DeepSeek
+        system_info += f"• DeepSeek AI: {'✅ Доступен' if DEEPSEEK_API_KEY else '❌ Не настроен'}\n"
+
+        # Погода
+        system_info += f"• Погода: {'✅ Настроена' if WEATHER_API_KEY and WEATHER_API_KEY != 'demo_key_12345' else '⚠️ Демо-данные'}\n\n"
+
+        system_info += (
+            "💡 <b>Доступные команды:</b>\n"
+            "/status - Детальный статус системы\n"
+            "/logs - Просмотр логов\n"
+            "/clearlogs - Очистка логов\n\n"
+
+            "🔒 <i>Эта панель доступна только администраторам</i>"
+        )
+
+        await update.message.reply_text(system_info, parse_mode='HTML', reply_markup=create_admin_functions_keyboard())
+
+    except Exception as e:
+        logger.error(f"Ошибка при показе административной панели: {e}")
+        await update.message.reply_text(
+            "❌ Ошибка при загрузке административной панели.",
+            reply_markup=create_other_functions_keyboard()
+        )
+
+async def show_system_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Показывает детальную статистику системы (только для администраторов)"""
+    try:
+        if update.effective_user.id not in ADMIN_IDS:
+            await update.message.reply_text("❌ У вас нет доступа к этой функции.")
+            return
+
+        log_user_action(update.effective_user.id, "view_system_stats")
+
+        from db import get_all_users, get_all_alerts
+        import psutil
+        from datetime import datetime
+
+        users = await get_all_users()
+        alerts = await get_all_alerts()
+
+        # Анализируем уведомления по валютам
+        currency_stats = {}
+        for alert in alerts:
+            currency = alert['from_currency']
+            currency_stats[currency] = currency_stats.get(currency, 0) + 1
+
+        # Сортируем по популярности
+        popular_currencies = sorted(currency_stats.items(), key=lambda x: x[1], reverse=True)[:5]
+
+        message = (
+            "📊 <b>ДЕТАЛЬНАЯ СТАТИСТИКА СИСТЕМЫ</b>\n\n"
+
+            "👥 <b>Пользователи:</b>\n"
+            f"• Всего пользователей: {len(users)}\n\n"
+
+            "🔔 <b>Уведомления:</b>\n"
+            f"• Всего уведомлений: {len(alerts)}\n"
+            f"• Активных уведомлений: {len([a for a in alerts if a.get('is_active', True)])}\n\n"
+
+            "💱 <b>Популярные валюты для уведомлений:</b>\n"
+        )
+
+        for currency, count in popular_currencies:
+            message += f"• {currency}: {count} уведомлений\n"
+
+        if not popular_currencies:
+            message += "• Нет данных\n"
+
+        message += f"\n🕒 <b>Время сервера:</b> {datetime.now().strftime('%d.%m.%Y %H:%M:%S')}\n"
+        message += f"💾 <b>Использование памяти:</b> {psutil.virtual_memory().percent}%\n"
+        message += f"🔧 <b>Загрузка CPU:</b> {psutil.cpu_percent()}%\n\n"
+
+        message += "📈 <i>Статистика обновляется в реальном времени</i>"
+
+        await update.message.reply_text(message, parse_mode='HTML', reply_markup=create_admin_functions_keyboard())
+
+    except Exception as e:
+        logger.error(f"Ошибка при показе статистики системы: {e}")
+        await update.message.reply_text("❌ Ошибка при загрузке статистики.")
+
+async def show_bot_settings(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Показывает настройки бота (только для администраторов)"""
+    try:
+        if update.effective_user.id not in ADMIN_IDS:
+            await update.message.reply_text("❌ У вас нет доступа к этой функции.")
+            return
+
+        log_user_action(update.effective_user.id, "view_bot_settings")
+
+        from config import DEEPSEEK_API_KEY, WEATHER_API_KEY, COINGECKO_API_KEY
+
+        message = (
+            "⚙️ <b>НАСТРОЙКИ БОТА</b>\n\n"
+
+            "📋 <b>Основные настройки:</b>\n"
+            f"• Версия: {BOT_VERSION}\n"
+            f"• Последнее обновление: {BOT_LAST_UPDATE}\n"
+            f"• Дата создания: {BOT_CREATION_DATE}\n\n"
+
+            "🔑 <b>API ключи:</b>\n"
+            f"• DeepSeek AI: {'✅ Настроен' if DEEPSEEK_API_KEY else '❌ Не настроен'}\n"
+            f"• Погода: {'✅ Настроен' if WEATHER_API_KEY and WEATHER_API_KEY != 'demo_key_12345' else '❌ Не настроен'}\n"
+            f"• CoinGecko: {'✅ Настроен' if COINGECKO_API_KEY else '❌ Не настроен'}\n\n"
+
+            "⏰ <b>Расписание задач:</b>\n"
+            "• Ежедневная рассылка курсов: 15:00 МСК\n"
+            "• Ежедневная рассылка погоды: 10:00 МСК\n"
+            "• Проверка уведомлений: каждые 30 минут\n\n"
+
+            "💡 <i>Настройки управляются через переменные окружения</i>"
+        )
+
+        await update.message.reply_text(message, parse_mode='HTML', reply_markup=create_admin_functions_keyboard())
+
+    except Exception as e:
+        logger.error(f"Ошибка при показе настроек бота: {e}")
+        await update.message.reply_text("❌ Ошибка при загрузке настроек.")

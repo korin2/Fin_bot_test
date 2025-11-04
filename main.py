@@ -1,4 +1,4 @@
-# main.py - исправляем импорты
+# main.py
 import logging
 import asyncio
 import sys
@@ -12,11 +12,11 @@ from db import init_db
 from handlers_basic import (
     start, stop_command, help_command, show_main_menu,
     show_other_functions, show_bot_stats, show_bot_about,
-    show_settings, myid_command
+    show_settings, myid_command, show_admin_panel, show_system_stats, show_bot_settings
 )
 from handlers_finance import (
     show_currency_rates, show_key_rate, show_crypto_rates, show_weather,
-    show_ruonia_command, show_ruonia_history  # Добавляем оба импорта
+    show_ruonia_command, show_ruonia_history
 )
 from handlers_alerts import (
     alert_command, myalerts_command, show_alerts_menu
@@ -78,8 +78,8 @@ def main():
         application.add_handler(CommandHandler("keyrate", show_key_rate))
         application.add_handler(CommandHandler("crypto", show_crypto_rates))
         application.add_handler(CommandHandler("weather", show_weather))
-        application.add_handler(CommandHandler("ruonia", show_ruonia_command))  # Команда для текущей ставки
-        application.add_handler(CommandHandler("ruonia_history", show_ruonia_history))  # Команда для истории
+        application.add_handler(CommandHandler("ruonia", show_ruonia_command))
+        application.add_handler(CommandHandler("ruonia_history", show_ruonia_history))
 
         # Команды уведомлений
         application.add_handler(CommandHandler("alert", alert_command))

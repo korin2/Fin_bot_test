@@ -125,3 +125,13 @@ def create_alert_direction_keyboard():
         [KeyboardButton("🔙 Назад к валютам")]
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+
+def create_admin_functions_keyboard():
+    """Создает клавиатуру для административных функций"""
+    keyboard = [
+        [KeyboardButton("📊 Статистика системы")],
+        [KeyboardButton("🔧 Настройки бота")],
+        [KeyboardButton("📋 Логи бота")],
+        [KeyboardButton("🔙 Назад к функциям")]
+    ]
+    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)

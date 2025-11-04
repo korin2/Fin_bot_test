@@ -1,8 +1,8 @@
 # handlers_text.py
 import logging
-from telegram import Update
+from telegram import Update, KeyboardButton, ReplyKeyboardMarkup
 from telegram.ext import ContextTypes
-from config import logger
+from config import logger, ADMIN_IDS
 from utils import log_user_action, create_main_reply_keyboard, create_alerts_keyboard
 from handlers_basic import show_main_menu, show_other_functions, help_command, show_bot_stats, show_settings, show_bot_about
 from handlers_finance import show_currency_rates, show_crypto_rates, show_key_rate, show_weather
@@ -20,6 +20,32 @@ async def handle_text_messages(update: Update, context: ContextTypes.DEFAULT_TYP
 
         logger.info(f"Получено сообщение: '{user_message}' от пользователя {user_id}")
 
+        # Обработка административных функций
+        if user_message == "👑 Админ-панель" and user_id in ADMIN_IDS:
+            from handlers_basic import show_admin_panel
+            await show_admin_panel(update, context)
+            return
+
+        elif user_message == "📊 Статистика системы" and user_id in ADMIN_IDS:
+            from handlers_basic import show_system_stats
+            await show_system_stats(update, context)
+            return
+
+        elif user_message == "🔧 Настройки бота" and user_id in ADMIN_IDS:
+            from handlers_basic import show_bot_settings
+            await show_bot_settings(update, context)
+            return
+
+        elif user_message == "📋 Логи бота" and user_id in ADMIN_IDS:
+            from handlers_admin import logs_command
+            await logs_command(update, context)
+            return
+
+        elif user_message == "🔙 Назад к функциям":
+            from handlers_basic import show_other_functions
+            await show_other_functions(update, context)
+            return
+
         # Обработка меню уведомлений
         if user_message == "🔔 Уведомления":
             logger.info(f"Пользователь {user_id} нажал кнопку Уведомления")
@@ -27,7 +53,7 @@ async def handle_text_messages(update: Update, context: ContextTypes.DEFAULT_TYP
             await show_alerts_menu(update, context)
             return
 
-        elif user_message == "🔔 Создать уведомление":
+        elif user_message == "💱 Создать уведомление":
             logger.info(f"Пользователь {user_id} нажал кнопку Создать уведомление")
             from handlers_alerts import start_create_alert
             await start_create_alert(update, context)
@@ -114,6 +140,9 @@ async def handle_text_messages(update: Update, context: ContextTypes.DEFAULT_TYP
             await show_crypto_rates(update, context)
         elif user_message == "🏛️ Ставки ЦБ РФ":
             await show_key_rate(update, context)
+        elif user_message == "📊 RUONIA":
+            from handlers_finance import show_ruonia_command
+            await show_ruonia_command(update, context)
         elif user_message == "🤖 ИИ помощник":
             await show_ai_chat(update, context)
         elif user_message == "🌤️ Погода":
