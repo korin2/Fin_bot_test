@@ -1,7 +1,6 @@
-# main.py (упрощенный до максимума)
+# main.py (using Updater - старый стиль)
 import logging
-import asyncio
-from telegram.ext import Application, CommandHandler, MessageHandler, filters
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
 # Конфигурация
 TOKEN = "2020352781:AAEMRFfklLNDqO22fxWMpP6ofmP8WXJSaSc"
@@ -13,37 +12,35 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-async def start(update, context):
-    """Простой обработчик start"""
-    await update.message.reply_text("Бот запущен!")
+def start(update, context):
+    update.message.reply_text("Бот запущен!")
 
-async def help_command(update, context):
-    """Простой обработчик help"""
-    await update.message.reply_text("Помощь: используйте /start")
+def help_command(update, context):
+    update.message.reply_text("Помощь: используйте /start")
 
-async def handle_text(update, context):
-    """Обработчик текстовых сообщений"""
-    text = update.message.text
-    await update.message.reply_text(f"Вы сказали: {text}")
-
-async def main():
+def main():
     """Основная функция"""
-    # Создаем приложение
-    application = Application.builder().token(TOKEN).build()
+    try:
+        # Создаем Updater (старый стиль, но более стабильный)
+        updater = Updater(TOKEN, use_context=True)
 
-    # Добавляем базовые обработчики
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("help", help_command))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
+        # Получаем dispatcher
+        dp = updater.dispatcher
 
-    # Запускаем бота
-    logger.info("🚀 Запуск бота...")
-    await application.run_polling(drop_pending_updates=True)
+        # Добавляем обработчики
+        dp.add_handler(CommandHandler("start", start))
+        dp.add_handler(CommandHandler("help", help_command))
+        dp.add_handler(MessageHandler(Filters.text & ~Filters.command, start))
+
+        # Запускаем polling
+        logger.info("🚀 Запуск бота (Updater)...")
+        updater.start_polling(drop_pending_updates=True)
+
+        # Бот работает до принудительной остановки
+        updater.idle()
+
+    except Exception as e:
+        logger.error(f"Ошибка при запуске бота: {e}")
 
 if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        logger.info("Бот остановлен")
-    except Exception as e:
-        logger.error(f"Ошибка: {e}")
+    main()
