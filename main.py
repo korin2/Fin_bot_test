@@ -1,116 +1,49 @@
-# main.py
+# main.py (упрощенный до максимума)
 import logging
-import os
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters
-from config import TOKEN, logger
-from db import init_db
+import asyncio
+from telegram.ext import Application, CommandHandler, MessageHandler, filters
 
-# Импортируем обработчики
-from handlers_basic import (
-    start, stop_command, help_command, show_main_menu,
-    show_other_functions, show_bot_stats, show_bot_about,
-    show_settings, myid_command, show_admin_panel, show_system_stats, show_bot_settings
+# Конфигурация
+TOKEN = "2020352781:AAEMRFfklLNDqO22fxWMpP6ofmP8WXJSaSc"
+
+# Настройка логирования
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
 )
-from handlers_finance import (
-    show_currency_rates, show_key_rate, show_crypto_rates, show_weather,
-    show_ruonia_command, show_ruonia_history
-)
-from handlers_alerts import (
-    alert_command, myalerts_command, show_alerts_menu
-)
-from handlers_ai import show_ai_chat
-from handlers_admin import status_command, logs_command, clear_logs_command
-from handlers_text import handle_text_messages
-from handlers_callbacks import button_handler
-from jobs import setup_jobs
+logger = logging.getLogger(__name__)
 
-# Добавляем импорт admin_panel
-try:
-    from admin_panel import show_cache_management, handle_cache_command
-    logger.info("✅ Модуль admin_panel успешно импортирован в main.py")
-except ImportError as e:
-    logger.error(f"❌ Ошибка импорта admin_panel в main.py: {e}")
+async def start(update, context):
+    """Простой обработчик start"""
+    await update.message.reply_text("Бот запущен!")
 
-def setup_handlers(application):
-    """Настройка всех обработчиков"""
-    # Основные команды
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("stop", stop_command))
-    application.add_handler(CommandHandler("help", help_command))
-    application.add_handler(CommandHandler("myid", myid_command))
+async def help_command(update, context):
+    """Простой обработчик help"""
+    await update.message.reply_text("Помощь: используйте /start")
 
-    # Финансовые команды
-    application.add_handler(CommandHandler("rates", show_currency_rates))
-    application.add_handler(CommandHandler("crypto", show_crypto_rates))
-    application.add_handler(CommandHandler("keyrate", show_key_rate))
-    application.add_handler(CommandHandler("ruonia", show_ruonia_command))
-    application.add_handler(CommandHandler("ruonia_history", show_ruonia_history))
-    application.add_handler(CommandHandler("weather", show_weather))
-
-    # Уведомления
-    application.add_handler(CommandHandler("alert", alert_command))
-    application.add_handler(CommandHandler("myalerts", myalerts_command))
-
-    # ИИ помощник
-    application.add_handler(CommandHandler("ai", show_ai_chat))
-
-    # Административные команды
-    application.add_handler(CommandHandler("status", status_command))
-    application.add_handler(CommandHandler("logs", logs_command))
-    application.add_handler(CommandHandler("clearlogs", clear_logs_command))
-
-    # Обработчики callback-кнопок
-    application.add_handler(CallbackQueryHandler(button_handler))
-
-    # Обработчик текстовых сообщений (должен быть последним)
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_messages))
+async def handle_text(update, context):
+    """Обработчик текстовых сообщений"""
+    text = update.message.text
+    await update.message.reply_text(f"Вы сказали: {text}")
 
 async def main():
-    """Основная асинхронная функция"""
-    # Инициализация базы данных
-    logger.info("🔄 Инициализация базы данных...")
-    await init_db()
-    logger.info("✅ База данных инициализирована")
-
-    # Создание приложения
-    logger.info("🔄 Создание приложения бота...")
+    """Основная функция"""
+    # Создаем приложение
     application = Application.builder().token(TOKEN).build()
-    logger.info("✅ Приложение создано")
 
-    # Настройка обработчиков
-    logger.info("🔄 Настройка обработчиков...")
-    setup_handlers(application)
-    logger.info("✅ Обработчики настроены")
+    # Добавляем базовые обработчики
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
 
-    # Настройка фоновых задач
-    logger.info("🔄 Настройка фоновых задач...")
-    setup_jobs(application)
-    logger.info("✅ Фоновые задачи настроены")
-
-    # Запуск бота
+    # Запускаем бота
     logger.info("🚀 Запуск бота...")
-    await application.run_polling(
-        drop_pending_updates=True,
-        allowed_updates=['message', 'callback_query']
-    )
+    await application.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
-    # Настройка логирования
-    logging.basicConfig(
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        level=logging.INFO,
-        handlers=[
-            logging.StreamHandler(),
-            logging.FileHandler('bot.log', encoding='utf-8')
-        ]
-    )
-
-    # Запуск приложения
-    import asyncio
-
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        logger.info("⏹️ Бот остановлен пользователем")
+        logger.info("Бот остановлен")
     except Exception as e:
-        logger.error(f"❌ Критическая ошибка: {e}")
+        logger.error(f"Ошибка: {e}")
