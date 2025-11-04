@@ -1,4 +1,4 @@
-# config.py - добавляем переменные версии
+# config.py - добавляем API ключ CoinGecko
 import os
 import logging
 import sys
@@ -26,6 +26,11 @@ WEATHER_API_KEY = os.getenv('API_weather')
 if not WEATHER_API_KEY:
     logger.warning("API ключ погоды не найден, будут использоваться демо-данные")
 
+# API ключ CoinGecko
+COINGECKO_API_KEY = os.getenv('Fin_bot_coingecko')
+if not COINGECKO_API_KEY:
+    logger.warning("API ключ CoinGecko не найден, будут использоваться бесплатные запросы")
+
 # ID администраторов
 ADMIN_IDS = os.getenv('ADMIN_IDS', '')  # Получаем строку с ID
 if ADMIN_IDS:
@@ -42,7 +47,7 @@ else:
 
 # API URLs
 CBR_API_BASE = "https://www.cbr.ru/"
-COINGECKO_API_BASE = "https://api.coingecko.com/api/v3/"
+COINGECKO_API_BASE = "https://api.coingecko.com/api/v3"
 DEEPSEEK_API_BASE = "https://api.deepseek.com/v1/"
 OPENWEATHER_API_BASE = "http://api.openweathermap.org/data/2.5/"
 

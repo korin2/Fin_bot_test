@@ -46,7 +46,8 @@ from notifications import (
 from config import (
     BOT_VERSION,
     BOT_LAST_UPDATE,
-    BOT_CREATION_DATE
+    BOT_CREATION_DATE,
+    COINGECKO_API_KEY
 )
 
 # Экспортируем все функции для обратной совместимости
@@ -88,6 +89,9 @@ __all__ = [
     'BOT_VERSION',
     'BOT_LAST_UPDATE',
     'BOT_CREATION_DATE'
+
+    # API Keys
+    'COINGECKO_API_KEY'
 
 
 ]
