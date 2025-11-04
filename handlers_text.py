@@ -6,18 +6,6 @@ from config import logger, ADMIN_IDS
 from utils import log_user_action, create_main_reply_keyboard, create_alerts_keyboard
 from db import clear_user_alerts
 
-# Импортируем функции управления кэшем
-try:
-    from admin_panel import show_cache_management, handle_cache_command
-    logger.info("✅ Модуль admin_panel успешно импортирован в handlers_text")
-except ImportError as e:
-    logger.error(f"❌ Ошибка импорта admin_panel в handlers_text: {e}")
-    # Создаем заглушки для избежания ошибок
-    async def show_cache_management(*args, **kwargs):
-        pass
-    async def handle_cache_command(*args, **kwargs):
-        pass
-
 async def handle_text_messages(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Обработчик текстовых сообщений для reply-меню"""
     try:
@@ -28,40 +16,6 @@ async def handle_text_messages(update: Update, context: ContextTypes.DEFAULT_TYP
         log_user_action(user_id, "text_message", {"message": user_message})
 
         logger.info(f"Получено сообщение: '{user_message}' от пользователя {user_id}")
-
-        # Обработка команды управления кэшем
-        if user_message == "💾 Управление кэшем" and user_id in ADMIN_IDS:
-            logger.info(f"Пользователь {user_id} нажал кнопку Управление кэшем")
-            try:
-                await show_cache_management(update, context)
-                return
-            except Exception as e:
-                logger.error(f"Ошибка при показе управления кэшем: {e}")
-                await update.message.reply_text(
-                    "❌ Ошибка при загрузке управления кэшем.",
-                    reply_markup=create_main_reply_keyboard()
-                )
-                return
-
-        # Обработка других команд управления кэшем
-        cache_commands = [
-            "🔄 Обновить весь кэш", "📊 Статус кэша",
-            "🔄 RUONIA", "🔄 Валюты", "🗑️ Очистить кэш",
-            "🔙 Назад к админ-панели"
-        ]
-
-        if user_message in cache_commands and user_id in ADMIN_IDS:
-            logger.info(f"Пользователь {user_id} выполнил команду кэша: {user_message}")
-            try:
-                await handle_cache_command(update, context, user_message)
-                return
-            except Exception as e:
-                logger.error(f"Ошибка при выполнении команды кэша: {e}")
-                await update.message.reply_text(
-                    f"❌ Ошибка при выполнении команды: {e}",
-                    reply_markup=create_main_reply_keyboard()
-                )
-                return
 
         # Обработка административных функций
         if user_message == "👑 Админ-панель" and user_id in ADMIN_IDS:
