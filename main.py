@@ -7,6 +7,7 @@ from telegram.ext import Application, CommandHandler, CallbackQueryHandler, Mess
 from telegram.error import Conflict
 from config import TOKEN, logger
 from db import init_db
+from admin_panel import show_cache_management, handle_cache_command
 
 # Импортируем обработчики из новых модулей
 from handlers_basic import (

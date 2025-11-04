@@ -131,6 +131,7 @@ def create_admin_functions_keyboard():
     keyboard = [
         [KeyboardButton("📊 Статистика системы")],
         [KeyboardButton("🔧 Настройки бота")],
+        [KeyboardButton("💾 Управление кэшем")],  # Новая кнопка
         [KeyboardButton("📋 Логи бота")],
         [KeyboardButton("🔙 Назад к функциям")]
     ]

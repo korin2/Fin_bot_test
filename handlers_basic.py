@@ -332,6 +332,7 @@ async def myid_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         reply_markup=create_main_reply_keyboard()
     )
 
+# handlers_basic.py - добавляем новую кнопку в админ-панель
 async def show_admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Показывает административную панель (только для администраторов)"""
     try:
@@ -355,6 +356,10 @@ async def show_admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         alerts = await get_all_alerts()
         active_alerts = len([alert for alert in alerts if alert.get('is_active', True)])
 
+        # Получаем информацию о кэше
+        from smart_cache import cache_manager
+        cache_info = cache_manager.get_cache_info()
+
         # Системная информация
         system_info = (
             "👑 <b>АДМИНИСТРАТИВНАЯ ПАНЕЛЬ</b>\n\n"
@@ -372,8 +377,18 @@ async def show_admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             f"• Активных уведомлений: {active_alerts}\n"
             f"• Администраторов: {len(ADMIN_IDS)}\n\n"
 
-            "📊 <b>API статусы:</b>\n"
+            "💾 <b>Состояние кэша:</b>\n"
         )
+
+        # Добавляем информацию о кэше
+        if cache_info:
+            for data_type, info in cache_info.items():
+                status_icon = "🟢" if not info['needs_refresh'] else "🟡"
+                system_info += f"• {data_type}: {status_icon} {info['age_str']}\n"
+        else:
+            system_info += "• Кэш пуст\n"
+
+        system_info += "\n📊 <b>API статусы:</b>\n"
 
         # Проверяем статусы API
         from api_currency import get_currency_rates_for_date

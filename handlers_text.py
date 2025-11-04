@@ -17,6 +17,18 @@ async def handle_text_messages(update: Update, context: ContextTypes.DEFAULT_TYP
 
         logger.info(f"Получено сообщение: '{user_message}' от пользователя {user_id}")
 
+        # Обработка команд управления кэшем
+        cache_commands = [
+            "💾 Управление кэшем", "🔄 Обновить весь кэш", "📊 Статус кэша",
+            "🔄 RUONIA", "🔄 Валюты", "🗑️ Очистить кэш"
+        ]
+
+        if user_message in cache_commands and user_id in ADMIN_IDS:
+            from admin_panel import handle_cache_command
+            await handle_cache_command(update, context, user_message)
+            return
+
+
         # Обработка административных функций
         if user_message == "👑 Админ-панель" and user_id in ADMIN_IDS:
             from handlers_basic import show_admin_panel
