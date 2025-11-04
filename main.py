@@ -1,4 +1,4 @@
-# main.py
+# main.py (упрощенный вариант)
 import logging
 import asyncio
 import sys
@@ -34,24 +34,8 @@ try:
 except ImportError as e:
     logger.error(f"❌ Ошибка импорта admin_panel в main.py: {e}")
 
-def main():
+async def main():
     """Основная функция запуска бота"""
-    try:
-        # Создание и настройка event loop
-        if sys.platform == 'win32':
-            # Для Windows
-            asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
-
-        # Запуск асинхронной функции
-        asyncio.run(run_bot())
-
-    except KeyboardInterrupt:
-        logger.info("⏹️ Бот остановлен пользователем")
-    except Exception as e:
-        logger.error(f"❌ Непредвиденная ошибка: {e}")
-
-async def run_bot():
-    """Асинхронная функция запуска бота"""
     try:
         # Инициализация базы данных
         logger.info("🔄 Инициализация базы данных...")
@@ -138,5 +122,10 @@ if __name__ == '__main__':
         ]
     )
 
-    # Запуск бота
-    main()
+    # Запуск асинхронного приложения
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logger.info("⏹️ Бот остановлен пользователем")
+    except Exception as e:
+        logger.error(f"❌ Непредвиденная ошибка: {e}")
