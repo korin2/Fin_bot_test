@@ -4,7 +4,7 @@ import platform
 from datetime import datetime
 from telegram import Update
 from telegram.ext import ContextTypes
-from config import logger, ADMIN_IDS
+from config import logger, ADMIN_IDS, BOT_VERSION, BOT_LAST_UPDATE
 from utils import log_user_action, create_main_reply_keyboard
 
 async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

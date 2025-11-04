@@ -93,7 +93,7 @@ async def send_daily_rates(context: ContextTypes.DEFAULT_TYPE):
                         change_icon = "📈" if change_info['change'] > 0 else "📉" if change_info['change'] < 0 else "➡️"
 
                         message += (
-                            f"   <b>{currency}:</b> {today_rate:.2f} руб.\n"
+                            f"  \n <b>{currency}:</b> {today_rate:.2f} руб.\n"
                             f"      <i>Завтра: {change_info['tomorrow_value']:.2f} руб. {change_icon}</i>\n"
                             f"      <i>Изменение: {change_info['change']:+.2f} руб. ({change_info['change_percent']:+.2f}%)</i>\n"
                         )
@@ -101,7 +101,7 @@ async def send_daily_rates(context: ContextTypes.DEFAULT_TYPE):
                         # Если курс на завтра есть, но изменений нет
                         tomorrow_rate = rates_tomorrow[currency]['value']
                         message += (
-                            f"   <b>{currency}:</b> {today_rate:.2f} руб.\n"
+                            f" \n  <b>{currency}:</b> {today_rate:.2f} руб.\n"
                             f"      <i>Завтра: {tomorrow_rate:.2f} руб. ➡️</i>\n"
                         )
                     else:
@@ -115,11 +115,11 @@ async def send_daily_rates(context: ContextTypes.DEFAULT_TYPE):
 
         # Добавляем ключевую ставку
         if key_rate_data:
-            message += f"💎 <b>Ключевая ставка:</b> {key_rate_data['rate']:.2f}%\n"
+            message += f"🏛️ <b>Ключевая ставка:</b> {key_rate_data['rate']:.2f}%\n"
 
         # Добавляем ставку RUONIA
         if ruonia_data:
-            message += f"📊 <b>Ставка RUONIA:</b> {ruonia_data['rate']:.2f}%\n"
+            message += f"\n📊 <b>Ставка RUONIA:</b> {ruonia_data['rate']:.2f}%\n"
 
             # Если есть обе ставки, показываем сравнение
             if key_rate_data and ruonia_data:

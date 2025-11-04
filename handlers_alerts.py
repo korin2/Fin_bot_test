@@ -2,7 +2,7 @@ import logging
 from telegram import Update, KeyboardButton, ReplyKeyboardMarkup
 from telegram.ext import ContextTypes
 from config import logger, SUPPORTED_CURRENCIES
-from utils import log_user_action, create_alerts_keyboard, create_currency_selection_keyboard, create_alert_direction_keyboard
+from utils import log_user_action, create_alerts_keyboard, create_currency_selection_keyboard, create_alert_direction_keyboard, create_main_reply_keyboard
 from db import get_user_alerts, clear_user_alerts, add_alert, get_user_settings, update_weather_notifications, get_users_with_weather_notifications
 # Обновляем импорт
 from api_currency import get_currency_rates_with_tomorrow
