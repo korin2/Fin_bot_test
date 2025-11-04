@@ -4,9 +4,6 @@ from telegram import Update, KeyboardButton, ReplyKeyboardMarkup
 from telegram.ext import ContextTypes
 from config import logger, ADMIN_IDS
 from utils import log_user_action, create_main_reply_keyboard, create_alerts_keyboard
-from handlers_basic import show_main_menu, show_other_functions, help_command, show_bot_stats, show_settings, show_bot_about
-from handlers_finance import show_currency_rates, show_crypto_rates, show_key_rate, show_weather
-from handlers_ai import show_ai_chat, handle_ai_message, show_ai_examples
 from db import clear_user_alerts
 
 async def handle_text_messages(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -135,35 +132,55 @@ async def handle_text_messages(update: Update, context: ContextTypes.DEFAULT_TYP
 
         # Обработка других функций
         if user_message == "💱 Курсы валют":
+            from handlers_finance import show_currency_rates
             await show_currency_rates(update, context)
         elif user_message == "₿ Криптовалюты":
+            from handlers_finance import show_crypto_rates
             await show_crypto_rates(update, context)
         elif user_message == "🏛️ Ставки ЦБ РФ":
+            from handlers_finance import show_key_rate
             await show_key_rate(update, context)
         elif user_message == "📊 RUONIA":
             from handlers_finance import show_ruonia_command
             await show_ruonia_command(update, context)
         elif user_message == "🤖 ИИ помощник":
+            from handlers_ai import show_ai_chat
             await show_ai_chat(update, context)
         elif user_message == "🌤️ Погода":
+            from handlers_finance import show_weather
             await show_weather(update, context)
         elif user_message == "🔧 Другие функции":
-            await show_other_functions(update, context)
+            try:
+                from handlers_basic import show_other_functions
+                await show_other_functions(update, context)
+            except Exception as e:
+                logger.error(f"Ошибка при импорте show_other_functions: {e}")
+                await update.message.reply_text(
+                    "❌ Временная ошибка при загрузке функций.",
+                    reply_markup=create_main_reply_keyboard()
+                )
         elif user_message == "❓ Помощь":
+            from handlers_basic import help_command
             await help_command(update, context)
         elif user_message == "📊 Статистика":
+            from handlers_basic import show_bot_stats
             await show_bot_stats(update, context)
         elif user_message == "⚙️ Настройки":
+            from handlers_basic import show_settings
             await show_settings(update, context)
         elif user_message == "ℹ️ О боте":
+            from handlers_basic import show_bot_about
             await show_bot_about(update, context)
         elif user_message == "💡 Примеры вопросов":
+            from handlers_ai import show_ai_examples
             await show_ai_examples(update, context)
         elif user_message == "🔄 Новый вопрос":
+            from handlers_ai import show_ai_chat
             await show_ai_chat(update, context)
 
         # Если сообщение не распознано как команда меню, пробуем обработать как запрос к ИИ
         elif context.user_data.get('ai_mode') == True:
+            from handlers_ai import handle_ai_message
             await handle_ai_message(update, context)
         else:
             # Если не режим ИИ и не команда меню, показываем подсказку
@@ -192,3 +209,21 @@ def clear_user_context(context: ContextTypes.DEFAULT_TYPE) -> None:
     ]
     for key in keys_to_clear:
         context.user_data.pop(key, None)
+
+async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Быстрое отображение главного меню без лишних операций"""
+    try:
+        user = update.effective_user
+        greeting = f"Привет, {user.first_name}!" if user.first_name else "Привет!"
+
+        menu_message = (
+            f'{greeting}\n'
+            f'👇 <b>Выберите действие в меню ниже:</b>'
+        )
+
+        reply_markup = create_main_reply_keyboard()
+        await update.message.reply_text(menu_message, parse_mode='HTML', reply_markup=reply_markup)
+
+    except Exception as e:
+        logger.error(f"Ошибка при показе главного меню: {e}")
+        await update.message.reply_text("❌ Произошла ошибка.", reply_markup=create_main_reply_keyboard())
