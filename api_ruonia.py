@@ -4,12 +4,19 @@ from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 import logging
 from config import logger
+from smart_cache import cache_manager
 
-def get_ruonia_rate():
-    """Получает ставку RUONIA с сайта ЦБ РФ (страница dynamics)"""
+def get_ruonia_rate(use_cache=True):
+    """Получает ставку RUONIA с сайта ЦБ РФ с поддержкой кэширования"""
+    if use_cache:
+        return cache_manager.get_data('ruonia', _get_ruonia_rate_impl)
+    else:
+        return _get_ruonia_rate_impl()
+
+def _get_ruonia_rate_impl():
+    """Реальная реализация парсинга RUONIA (перенесена из старой get_ruonia_rate)"""
     try:
         url = "https://cbr.ru/hd_base/ruonia/dynamics/"
-
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
@@ -26,11 +33,9 @@ def get_ruonia_rate():
         soup = BeautifulSoup(response.content, 'html.parser')
         logger.info("HTML получен успешно")
 
-        # Ищем таблицу со ставками RUONIA
+        # ... (остальной код парсинга без изменений)
         table = soup.find('table', class_='data')
-
         if not table:
-            # Пробуем найти любую таблицу
             table = soup.find('table')
             logger.info("Таблица найдена без класса")
 
@@ -39,26 +44,16 @@ def get_ruonia_rate():
             rows = table.find_all('tr')
             logger.info(f"Найдено строк в таблице: {len(rows)}")
 
-            # Собираем все доступные данные
             rates_data = []
-
-            for i, row in enumerate(rows[1:], 1):  # Пропускаем заголовок
+            for i, row in enumerate(rows[1:], 1):
                 cells = row.find_all(['td', 'th'])
-
                 if len(cells) >= 2:
                     try:
-                        # Первая ячейка - дата
                         date_text = cells[0].get_text(strip=True)
-                        # Вторая ячейка - ставка
                         rate_text = cells[1].get_text(strip=True)
-
-                        # Парсим дату
                         date_obj = datetime.strptime(date_text, '%d.%m.%Y')
-
-                        # Парсим ставку (заменяем запятую на точку)
                         rate_value = float(rate_text.replace(',', '.'))
 
-                        # Проверяем, что дата не в будущем и ставка разумная
                         if date_obj <= datetime.now() and 1 <= rate_value <= 30:
                             rates_data.append({
                                 'date': date_obj,
@@ -71,11 +66,9 @@ def get_ruonia_rate():
                         logger.warning(f"Ошибка парсинга строки {i}: {e}")
                         continue
 
-            # Сортируем по дате (от новых к старым) и берем самую свежую
             if rates_data:
                 rates_data.sort(key=lambda x: x['date'], reverse=True)
                 latest_rate = rates_data[0]
-
                 logger.info(f"Самая свежая ставка: {latest_rate['date_str']} - {latest_rate['rate']}%")
 
                 return {
@@ -95,39 +88,42 @@ def get_ruonia_rate():
         logger.error(f"Ошибка при получении ставки RUONIA: {e}")
         return None
 
-def get_ruonia_historical(days=30):
-    """Получает исторические данные RUONIA за указанное количество дней"""
+def get_ruonia_historical(days=30, use_cache=True):
+    """Получает исторические данные RUONIA за указанное количество дней с кэшированием"""
+    if use_cache:
+        cache_key = f'ruonia_historical_{days}'
+        return cache_manager.get_data(cache_key, lambda: _get_ruonia_historical_impl(days))
+    else:
+        return _get_ruonia_historical_impl(days)
+
+def _get_ruonia_historical_impl(days=30):
+    """Реальная реализация получения исторических данных"""
+    # ... (код из старой get_ruonia_historical без изменений)
     try:
         url = "https://cbr.ru/hd_base/ruonia/dynamics/"
-
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
         }
 
         response = requests.get(url, headers=headers, timeout=15)
-
         if response.status_code != 200:
             return None
 
         soup = BeautifulSoup(response.content, 'html.parser')
         table = soup.find('table', class_='data')
-
         if not table:
             table = soup.find('table')
 
         if table:
             rates_data = []
             rows = table.find_all('tr')
-
-            for row in rows[1:]:  # Пропускаем заголовок
+            for row in rows[1:]:
                 cells = row.find_all(['td', 'th'])
-
                 if len(cells) >= 2:
                     try:
                         date_text = cells[0].get_text(strip=True)
                         rate_text = cells[1].get_text(strip=True)
-
                         date_obj = datetime.strptime(date_text, '%d.%m.%Y')
                         rate_value = float(rate_text.replace(',', '.'))
 
@@ -137,11 +133,9 @@ def get_ruonia_historical(days=30):
                                 'rate': rate_value,
                                 'date_str': date_text
                             })
-
                     except (ValueError, IndexError):
                         continue
 
-            # Сортируем по дате и ограничиваем количеством дней
             rates_data.sort(key=lambda x: x['date'], reverse=True)
             return rates_data[:days]
 
@@ -150,6 +144,7 @@ def get_ruonia_historical(days=30):
     except Exception as e:
         logger.error(f"Ошибка при получении исторических данных RUONIA: {e}")
         return None
+
 
 def format_ruonia_message(ruonia_data: dict) -> str:
     """Форматирует сообщение со ставкой RUONIA"""
