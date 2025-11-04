@@ -162,9 +162,6 @@ async def handle_text_messages(update: Update, context: ContextTypes.DEFAULT_TYP
         elif user_message == "❓ Помощь":
             from handlers_basic import help_command
             await help_command(update, context)
-        elif user_message == "📊 Статистика":
-            from handlers_basic import show_bot_stats
-            await show_bot_stats(update, context)
         elif user_message == "⚙️ Настройки":
             from handlers_basic import show_settings
             await show_settings(update, context)
