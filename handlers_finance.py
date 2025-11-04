@@ -63,6 +63,7 @@ async def show_key_rate(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         logger.error(f"Ошибка при показе ключевой ставки: {e}")
         await update.message.reply_text("❌ Ошибка при получении данных.", reply_markup=create_main_reply_keyboard())
 
+# handlers_finance.py - упрощаем обработку crypto
 async def show_crypto_rates(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Показывает курсы криптовалют"""
     try:
@@ -75,21 +76,12 @@ async def show_crypto_rates(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         # Получаем данные
         crypto_rates = get_crypto_rates()
 
-        # Если не удалось получить данные, используем fallback
-        if not crypto_rates:
-            logger.warning("Не удалось получить данные от CoinGecko, используем fallback")
-            crypto_rates = get_crypto_rates_fallback()
-
         if not crypto_rates:
             error_msg = "❌ <b>Не удалось получить курсы криптовалют.</b>"
             await update.message.reply_text(error_msg, parse_mode='HTML', reply_markup=create_main_reply_keyboard())
             return
 
         message_text = format_crypto_rates_message(crypto_rates)
-
-        # Добавляем предупреждение если используем демо-данные
-        if crypto_rates.get('source') == 'demo_fallback':
-            message_text += "\n\n⚠️ <i>Используются демонстрационные данные (CoinGecko API недоступен)</i>"
 
         await update.message.reply_text(message_text, parse_mode='HTML', reply_markup=create_main_reply_keyboard())
 

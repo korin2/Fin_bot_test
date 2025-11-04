@@ -1,8 +1,9 @@
+# api_crypto.py - исправляем импорты
 import requests
 import json
 from datetime import datetime, timezone, timedelta
 import logging
-from config import COINGECKO_API_BASE, logger
+from config import logger, COINGECKO_API_BASE  # Добавляем импорт COINGECKO_API_BASE
 
 def get_crypto_rates():
     """Получает курсы криптовалют через CoinGecko API"""
@@ -12,38 +13,41 @@ def get_crypto_rates():
             'bitcoin', 'ethereum', 'binancecoin', 'ripple', 'cardano',
             'solana', 'polkadot', 'dogecoin', 'tron', 'litecoin'
         ]
-        
-        url = f"{COINGECKO_API_BASE}simple/price"
+
+        url = f"{COINGECKO_API_BASE}simple/price"  # Теперь переменная доступна
         params = {
             'ids': ','.join(crypto_ids),
             'vs_currencies': 'rub,usd',
             'include_24hr_change': 'true',
             'include_last_updated_at': 'true'
         }
-        
+
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
             'Accept': 'application/json'
         }
-        
+
         logger.info(f"Запрос к CoinGecko API: {url}")
         logger.info(f"Параметры: {params}")
-        
+
         response = requests.get(url, params=params, headers=headers, timeout=15)
-        
-        if response.status_code != 200:
+
+        if response.status_code == 429:
+            logger.warning("Превышен лимит запросов к CoinGecko API (429)")
+            return get_crypto_rates_fallback(rate_limit=True)
+        elif response.status_code != 200:
             logger.error(f"Ошибка CoinGecko API: {response.status_code}")
             logger.error(f"Текст ответа: {response.text}")
-            return None
-            
+            return get_crypto_rates_fallback()
+
         data = response.json()
         logger.info(f"Получены данные от CoinGecko: {type(data)}")
-        
+
         # Проверяем структуру ответа
         if not isinstance(data, dict):
             logger.error(f"Неправильный формат ответа: ожидался dict, получен {type(data)}")
-            return None
-            
+            return get_crypto_rates_fallback()
+
         # Маппинг названий криптовалют
         crypto_names = {
             'bitcoin': {'name': 'Bitcoin', 'symbol': 'BTC'},
@@ -57,31 +61,31 @@ def get_crypto_rates():
             'tron': {'name': 'TRON', 'symbol': 'TRX'},
             'litecoin': {'name': 'Litecoin', 'symbol': 'LTC'}
         }
-        
+
         crypto_rates = {}
         valid_count = 0
-        
+
         for crypto_id, info in crypto_names.items():
             if crypto_id in data:
                 crypto_data = data[crypto_id]
-                
+
                 # Проверяем что crypto_data - словарь
                 if not isinstance(crypto_data, dict):
                     logger.warning(f"Данные для {crypto_id} не словарь: {type(crypto_data)}")
                     continue
-                
+
                 # Получаем цены с проверкой
                 price_rub = crypto_data.get('rub')
                 price_usd = crypto_data.get('usd')
-                
+
                 # Получаем изменение цены (может быть под разными ключами)
                 change_24h = crypto_data.get('rub_24h_change') or crypto_data.get('usd_24h_change') or 0
-                
+
                 # Проверяем что цены есть и они числа
                 if price_rub is None or price_usd is None:
                     logger.warning(f"Отсутствуют цены для {crypto_id}: RUB={price_rub}, USD={price_usd}")
                     continue
-                
+
                 try:
                     price_rub = float(price_rub)
                     price_usd = float(price_usd)
@@ -89,7 +93,7 @@ def get_crypto_rates():
                 except (TypeError, ValueError) as e:
                     logger.warning(f"Ошибка преобразования данных для {crypto_id}: {e}")
                     continue
-                
+
                 crypto_rates[crypto_id] = {
                     'name': info['name'],
                     'symbol': info['symbol'],
@@ -101,30 +105,34 @@ def get_crypto_rates():
                 valid_count += 1
             else:
                 logger.warning(f"Криптовалюта {crypto_id} не найдена в ответе API")
-        
+
         logger.info(f"Успешно обработано {valid_count} криптовалют")
-        
+
         if crypto_rates:
             # Исправляем время на московское (UTC+3)
             moscow_tz = timezone(timedelta(hours=3))
             crypto_rates['update_time'] = datetime.now(moscow_tz).strftime('%d.%m.%Y %H:%M')
             crypto_rates['source'] = 'coingecko'
+            crypto_rates['rate_limit'] = False
             return crypto_rates
         else:
             logger.error("Не найдено валидных данных по криптовалютам в ответе API")
-            return None
-            
+            return get_crypto_rates_fallback()
+
+    except requests.exceptions.Timeout:
+        logger.error("Таймаут при запросе к CoinGecko API")
+        return get_crypto_rates_fallback()
     except requests.exceptions.RequestException as e:
         logger.error(f"Сетевая ошибка при получении курсов криптовалют: {e}")
-        return None
+        return get_crypto_rates_fallback()
     except json.JSONDecodeError as e:
         logger.error(f"Ошибка парсинга JSON от CoinGecko: {e}")
-        return None
+        return get_crypto_rates_fallback()
     except Exception as e:
         logger.error(f"Неожиданная ошибка при получении курсов криптовалют: {e}")
-        return None
+        return get_crypto_rates_fallback()
 
-def get_crypto_rates_fallback():
+def get_crypto_rates_fallback(rate_limit=False):
     """Резервная функция для получения курсов криптовалют (демо-данные)"""
     try:
         # Демо-данные на случай недоступности API
@@ -138,7 +146,7 @@ def get_crypto_rates_fallback():
                 'last_updated': datetime.now().timestamp()
             },
             'ethereum': {
-                'name': 'Ethereum', 
+                'name': 'Ethereum',
                 'symbol': 'ETH',
                 'price_rub': 300000.0,
                 'price_usd': 3300.0,
@@ -147,7 +155,7 @@ def get_crypto_rates_fallback():
             },
             'binancecoin': {
                 'name': 'Binance Coin',
-                'symbol': 'BNB', 
+                'symbol': 'BNB',
                 'price_rub': 35000.0,
                 'price_usd': 380.0,
                 'change_24h': -0.5,
@@ -168,16 +176,41 @@ def get_crypto_rates_fallback():
                 'price_usd': 0.48,
                 'change_24h': -1.2,
                 'last_updated': datetime.now().timestamp()
+            },
+            'solana': {
+                'name': 'Solana',
+                'symbol': 'SOL',
+                'price_rub': 15000.0,
+                'price_usd': 160.0,
+                'change_24h': 3.2,
+                'last_updated': datetime.now().timestamp()
+            },
+            'polkadot': {
+                'name': 'Polkadot',
+                'symbol': 'DOT',
+                'price_rub': 800.0,
+                'price_usd': 8.5,
+                'change_24h': 1.5,
+                'last_updated': datetime.now().timestamp()
+            },
+            'dogecoin': {
+                'name': 'Dogecoin',
+                'symbol': 'DOGE',
+                'price_rub': 30.0,
+                'price_usd': 0.32,
+                'change_24h': -2.1,
+                'last_updated': datetime.now().timestamp()
             }
         }
-        
+
         moscow_tz = timezone(timedelta(hours=3))
         crypto_rates['update_time'] = datetime.now(moscow_tz).strftime('%d.%m.%Y %H:%M')
         crypto_rates['source'] = 'demo_fallback'
-        
+        crypto_rates['rate_limit'] = rate_limit  # Добавляем информацию о лимите
+
         logger.info("Используются демо-данные криптовалют")
         return crypto_rates
-        
+
     except Exception as e:
         logger.error(f"Ошибка в fallback функции криптовалют: {e}")
         return None
@@ -186,23 +219,32 @@ def format_crypto_rates_message(crypto_rates: dict) -> str:
     """Форматирует сообщение с курсами криптовалют"""
     if not crypto_rates:
         return "❌ Не удалось получить курсы криптовалют от CoinGecko API."
-    
+
     message = f"₿ <b>КУРСЫ КРИПТОВАЛЮТ</b>\n\n"
-    
+
+    # Добавляем предупреждение если используем демо-данные
+    if crypto_rates.get('source') == 'demo_fallback':
+        if crypto_rates.get('rate_limit'):
+            message += "⚠️ <b>ВНИМАНИЕ:</b> Превышен лимит запросов к CoinGecko API\n"
+            message += "💡 <i>Используются демонстрационные данные</i>\n\n"
+        else:
+            message += "⚠️ <b>ВНИМАНИЕ:</b> CoinGecko API временно недоступен\n"
+            message += "💡 <i>Используются демонстрационные данные</i>\n\n"
+
     # Основные криптовалюты (первые 5)
     main_cryptos = ['bitcoin', 'ethereum', 'binancecoin', 'ripple', 'cardano']
-    
+
     for crypto_id in main_cryptos:
         if crypto_id in crypto_rates:
             data = crypto_rates[crypto_id]
-            
+
             # Безопасное получение данных
             name = data.get('name', 'N/A')
             symbol = data.get('symbol', 'N/A')
             price_rub = data.get('price_rub', 0)
             price_usd = data.get('price_usd', 0)
             change_24h = data.get('change_24h', 0)
-            
+
             # Проверяем типы данных
             try:
                 price_rub = float(price_rub)
@@ -210,45 +252,46 @@ def format_crypto_rates_message(crypto_rates: dict) -> str:
                 change_24h = float(change_24h)
             except (TypeError, ValueError):
                 continue
-            
+
             change_icon = "📈" if change_24h > 0 else "📉" if change_24h < 0 else "➡️"
-            
+
             message += (
                 f"<b>{name} ({symbol})</b>\n"
                 f"   💰 <b>{price_rub:,.0f} руб.</b>\n"
                 f"   💵 {price_usd:,.2f} $\n"
                 f"   {change_icon} <i>{change_24h:+.2f}% (24ч)</i>\n\n"
             )
-    
+
     # Остальные криптовалюты
-    other_cryptos = [crypto_id for crypto_id in crypto_rates.keys() 
-                    if crypto_id not in main_cryptos and crypto_id not in ['update_time', 'source']]
-    
+    other_cryptos = [crypto_id for crypto_id in crypto_rates.keys()
+                    if crypto_id not in main_cryptos and crypto_id not in ['update_time', 'source', 'rate_limit']]
+
     if other_cryptos:
         message += "🔹 <b>Другие криптовалюты:</b>\n"
-        
+
         for crypto_id in other_cryptos:
             data = crypto_rates[crypto_id]
             symbol = data.get('symbol', 'N/A')
             price_rub = data.get('price_rub', 0)
             change_24h = data.get('change_24h', 0)
-            
+
             try:
                 price_rub = float(price_rub)
                 change_24h = float(change_24h)
             except (TypeError, ValueError):
                 continue
-            
+
             change_icon = "📈" if change_24h > 0 else "📉" if change_24h < 0 else "➡️"
-            
+
             message += (
                 f"   <b>{symbol}</b>: {price_rub:,.0f} руб. {change_icon}\n"
             )
-    
+
     message += f"\n<i>Обновлено: {crypto_rates.get('update_time', 'неизвестно')} (МСК)</i>\n\n"
-    message += "💡 <i>Данные предоставлены CoinGecko API</i>"
-    
+
     if crypto_rates.get('source') == 'coingecko':
-        message += f"\n\n✅ <i>Официальные данные CoinGecko</i>"
-    
+        message += "💡 <i>Данные предоставлены CoinGecko API</i>"
+    else:
+        message += "💡 <i>Данные обновятся при восстановлении доступа к CoinGecko API</i>"
+
     return message
