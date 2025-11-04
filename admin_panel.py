@@ -1,4 +1,4 @@
-# admin_panel.py
+# admin_panel.py - исправляем импорты
 import logging
 from telegram import Update, KeyboardButton, ReplyKeyboardMarkup
 from telegram.ext import ContextTypes
@@ -22,24 +22,40 @@ class AdminCacheManager:
 
     def _get_ruonia_rate(self):
         """Получает ставку RUONIA без кэша"""
-        from api_ruonia import get_ruonia_rate
-        return get_ruonia_rate(use_cache=False)
+        try:
+            from api_ruonia import get_ruonia_rate
+            return get_ruonia_rate(use_cache=False)
+        except Exception as e:
+            logger.error(f"Ошибка получения ruonia: {e}")
+            return None
 
     def _get_ruonia_historical(self):
         """Получает историю RUONIA без кэша"""
-        from api_ruonia import get_ruonia_historical
-        return get_ruonia_historical(days=30, use_cache=False)
+        try:
+            from api_ruonia import get_ruonia_historical
+            return get_ruonia_historical(days=30, use_cache=False)
+        except Exception as e:
+            logger.error(f"Ошибка получения ruonia historical: {e}")
+            return None
 
     def _get_key_rate(self):
         """Получает ключевую ставку без кэша"""
-        from api_keyrate import get_key_rate
-        return get_key_rate()
+        try:
+            from api_keyrate import get_key_rate
+            return get_key_rate()
+        except Exception as e:
+            logger.error(f"Ошибка получения key rate: {e}")
+            return None
 
     def _get_currency_rates(self):
         """Получает курсы валют без кэша"""
-        from api_currency import get_currency_rates_with_history
-        rates_today, date_today, _, _, _, _ = get_currency_rates_with_history()
-        return rates_today
+        try:
+            from api_currency import get_currency_rates_with_history
+            rates_today, date_today, _, _, _, _ = get_currency_rates_with_history()
+            return rates_today
+        except Exception as e:
+            logger.error(f"Ошибка получения currency rates: {e}")
+            return None
 
     async def show_cache_management(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Показывает панель управления кэшем"""
