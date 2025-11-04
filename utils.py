@@ -52,7 +52,7 @@ def create_main_reply_keyboard():
             KeyboardButton("₿ Криптовалюты")
         ],
         [
-            KeyboardButton("💎 Ключевая ставка"),
+            KeyboardButton("🏛️ Ставки ЦБ РФ"),
             KeyboardButton("🤖 ИИ помощник")
         ],
         [

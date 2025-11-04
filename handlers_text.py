@@ -27,7 +27,7 @@ async def handle_text_messages(update: Update, context: ContextTypes.DEFAULT_TYP
             await show_alerts_menu(update, context)
             return
 
-        elif user_message == "💱 Создать уведомление":
+        elif user_message == "🔔 Создать уведомление":
             logger.info(f"Пользователь {user_id} нажал кнопку Создать уведомление")
             from handlers_alerts import start_create_alert
             await start_create_alert(update, context)
@@ -112,7 +112,7 @@ async def handle_text_messages(update: Update, context: ContextTypes.DEFAULT_TYP
             await show_currency_rates(update, context)
         elif user_message == "₿ Криптовалюты":
             await show_crypto_rates(update, context)
-        elif user_message == "💎 Ключевая ставка":
+        elif user_message == "🏛️ Ставки ЦБ РФ":
             await show_key_rate(update, context)
         elif user_message == "🤖 ИИ помощник":
             await show_ai_chat(update, context)
