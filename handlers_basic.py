@@ -183,7 +183,7 @@ async def show_other_functions(update: Update, context: ContextTypes.DEFAULT_TYP
         # Для администраторов показываем расширенную клавиатуру
         if update.effective_user.id in ADMIN_IDS:
             keyboard = [
-                [KeyboardButton("🌤️ Погода"),
+                [KeyboardButton("🌤️ Погода")]
                 [KeyboardButton("⚙️ Настройки"), KeyboardButton("ℹ️ О боте")],
                 [KeyboardButton("👑 Админ-панель")],  # Новая кнопка для администраторов
                 [KeyboardButton("🔙 Главное меню")]
