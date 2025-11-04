@@ -1,15 +1,18 @@
 # smart_cache.py
 from datetime import datetime, time
 import logging
+import pickle
+import os
 from config import logger
 
 class SmartCache:
     """
-    Умный кэш с расписанием обновления и TTL
+    Умный кэш с расписанием обновления, TTL и админ-функциями
     """
 
     def __init__(self):
         self.cache = {}
+        self.cache_file = 'cache_data.pkl'
 
         # Расписание обновления для разных типов данных
         self.schedule = {
@@ -25,6 +28,8 @@ class SmartCache:
             'currency': 6     # 6 часов
         }
 
+        # Загружаем кэш с диска при старте
+        self.load_cache()
         logger.info("SmartCache инициализирован")
 
     def _get_current_time_str(self):
@@ -66,14 +71,6 @@ class SmartCache:
     def get_data(self, data_type, fetch_function, force_refresh=False):
         """
         Получает данные из кэша или обновляет их при необходимости
-
-        Args:
-            data_type: тип данных ('key_rate', 'ruonia', 'currency')
-            fetch_function: функция для получения свежих данных
-            force_refresh: принудительное обновление
-
-        Returns:
-            Данные из кэша или свежие данные
         """
         try:
             if force_refresh or self.should_refresh(data_type):
@@ -88,6 +85,8 @@ class SmartCache:
                     'timestamp': datetime.now()
                 }
 
+                # Сохраняем на диск
+                self.save_cache()
                 logger.info(f"Кэш для {data_type} успешно обновлен")
 
             # Возвращаем данные из кэша
@@ -104,6 +103,76 @@ class SmartCache:
             # Если в кэше ничего нет - пробрасываем исключение
             raise
 
+    def load_cache(self):
+        """Загружает кэш с диска"""
+        try:
+            if os.path.exists(self.cache_file):
+                with open(self.cache_file, 'rb') as f:
+                    self.cache = pickle.load(f)
+                logger.info(f"Кэш загружен с диска: {len(self.cache)} записей")
+            else:
+                logger.info("Файл кэша не найден, начинаем с пустого кэша")
+        except Exception as e:
+            logger.error(f"Ошибка загрузки кэша: {e}")
+            self.cache = {}
+
+    def save_cache(self):
+        """Сохраняет кэш на диск"""
+        try:
+            with open(self.cache_file, 'wb') as f:
+                pickle.dump(self.cache, f)
+            logger.debug("Кэш сохранен на диск")
+        except Exception as e:
+            logger.error(f"Ошибка сохранения кэша: {e}")
+
+    # 🔧 АДМИН-ФУНКЦИИ
+    def force_refresh_all(self, fetch_functions):
+        """
+        Принудительно обновляет все типы данных
+        """
+        results = {}
+        for data_type, fetch_func in fetch_functions.items():
+            try:
+                logger.info(f"Принудительное обновление кэша для {data_type}")
+                fresh_data = fetch_func()
+                self.cache[data_type] = {
+                    'data': fresh_data,
+                    'timestamp': datetime.now()
+                }
+                results[data_type] = {
+                    'status': 'success',
+                    'data': fresh_data
+                }
+                logger.info(f"Кэш для {data_type} успешно обновлен")
+            except Exception as e:
+                logger.error(f"Ошибка принудительного обновления {data_type}: {e}")
+                results[data_type] = {
+                    'status': 'error',
+                    'error': str(e)
+                }
+
+        # Сохраняем обновленный кэш
+        self.save_cache()
+        return results
+
+    def force_refresh_specific(self, data_type, fetch_function):
+        """
+        Принудительно обновляет конкретный тип данных
+        """
+        try:
+            logger.info(f"Принудительное обновление кэша для {data_type}")
+            fresh_data = fetch_function()
+            self.cache[data_type] = {
+                'data': fresh_data,
+                'timestamp': datetime.now()
+            }
+            self.save_cache()
+            logger.info(f"Кэш для {data_type} успешно обновлен")
+            return {'status': 'success', 'data': fresh_data}
+        except Exception as e:
+            logger.error(f"Ошибка принудительного обновления {data_type}: {e}")
+            return {'status': 'error', 'error': str(e)}
+
     def clear_cache(self, data_type=None):
         """
         Очищает кэш для указанного типа данных или весь кэш
@@ -111,24 +180,40 @@ class SmartCache:
         if data_type:
             if data_type in self.cache:
                 del self.cache[data_type]
+                self.save_cache()
                 logger.info(f"Кэш для {data_type} очищен")
+                return f"Кэш для {data_type} очищен"
+            else:
+                return f"Кэш для {data_type} не найден"
         else:
             self.cache.clear()
+            self.save_cache()
             logger.info("Весь кэш очищен")
+            return "Весь кэш очищен"
 
     def get_cache_info(self):
         """
-        Возвращает информацию о состоянии кэша
+        Возвращает подробную информацию о состоянии кэша
         """
         info = {}
         now = datetime.now()
 
         for data_type, cache_entry in self.cache.items():
-            age_hours = (now - cache_entry['timestamp']).total_seconds() / 3600
+            age_seconds = (now - cache_entry['timestamp']).total_seconds()
+            age_hours = age_seconds / 3600
+            age_str = f"{int(age_seconds // 3600)}ч {int((age_seconds % 3600) // 60)}м"
+
+            needs_refresh = self.should_refresh(data_type)
+            status = "🟢 Актуален" if not needs_refresh else "🟡 Требует обновления"
+
             info[data_type] = {
+                'age_seconds': age_seconds,
                 'age_hours': round(age_hours, 2),
-                'timestamp': cache_entry['timestamp'].strftime("%Y-%m-%d %H:%M:%S"),
-                'needs_refresh': self.should_refresh(data_type)
+                'age_str': age_str,
+                'timestamp': cache_entry['timestamp'].strftime("%d.%m.%Y %H:%M:%S"),
+                'needs_refresh': needs_refresh,
+                'status': status,
+                'data_exists': cache_entry['data'] is not None
             }
 
         return info
