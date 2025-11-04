@@ -1,4 +1,4 @@
-# main.py (упрощенный вариант)
+# main.py
 import logging
 import asyncio
 import sys
@@ -34,8 +34,29 @@ try:
 except ImportError as e:
     logger.error(f"❌ Ошибка импорта admin_panel в main.py: {e}")
 
-async def main():
+def main():
     """Основная функция запуска бота"""
+    # Настройка логирования
+    logging.basicConfig(
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        level=logging.INFO,
+        handlers=[
+            logging.StreamHandler(sys.stdout),
+            logging.FileHandler('bot.log', encoding='utf-8')
+        ]
+    )
+
+    # Запуск асинхронного приложения
+    try:
+        asyncio.run(run_bot())
+    except KeyboardInterrupt:
+        logger.info("⏹️ Бот остановлен пользователем")
+    except Exception as e:
+        logger.error(f"❌ Непредвиденная ошибка: {e}")
+
+async def run_bot():
+    """Асинхронная функция запуска бота"""
+    application = None
     try:
         # Инициализация базы данных
         logger.info("🔄 Инициализация базы данных...")
@@ -82,7 +103,7 @@ async def main():
         # Обработчик текстовых сообщений (должен быть последним)
         application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_messages))
 
-        logger.info("✅ Обработчики команд добавлены")
+        logger.info("✅ Обработчики команд добавены")
 
         # Настройка фоновых задач
         logger.info("🔄 Настройка фоновых задач...")
@@ -110,22 +131,10 @@ async def main():
 
     except Exception as e:
         logger.error(f"❌ Критическая ошибка при запуске бота: {e}")
+        # Явно останавливаем приложение при ошибке
+        if application:
+            await application.stop()
+            await application.shutdown()
 
 if __name__ == '__main__':
-    # Настройка логирования
-    logging.basicConfig(
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        level=logging.INFO,
-        handlers=[
-            logging.StreamHandler(sys.stdout),
-            logging.FileHandler('bot.log', encoding='utf-8')
-        ]
-    )
-
-    # Запуск асинхронного приложения
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        logger.info("⏹️ Бот остановлен пользователем")
-    except Exception as e:
-        logger.error(f"❌ Непредвиденная ошибка: {e}")
+    main()
