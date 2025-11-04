@@ -157,6 +157,7 @@ def format_combined_rates_message(key_rate_data: dict, ruonia_data: dict = None)
 
     message = "🏛️ <b>Ставки Банка России</b>\n\n"
     # Ключевая ставка
+    message += "📊 <b>Ключевая ставка:</b>\n"
     message += f"Текущее значение: <b>{key_rate:.2f}%</b>\n"
     message += f"Дата: {key_rate_data.get('date', 'неизвестно')}\n\n"
 
