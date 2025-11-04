@@ -1,11 +1,12 @@
-# notifications.py - добавляем импорт
+# notifications.py - добавляем импорт RUONIA
 import logging
 from telegram.ext import ContextTypes
 from config import logger
-from db import get_all_active_alerts, deactivate_alert, get_all_users, get_users_with_weather_notifications  # Добавляем импорт
-from api_currency import get_currency_rates_with_tomorrow, get_currency_rates_with_history  # Добавляем импорт
+from db import get_all_active_alerts, deactivate_alert, get_all_users, get_users_with_weather_notifications
+from api_currency import get_currency_rates_with_tomorrow, get_currency_rates_with_history
 from api_keyrate import get_key_rate
 from api_weather import get_weather_moscow, format_weather_message
+from api_ruonia import get_ruonia_rate  # Добавляем импорт RUONIA
 
 async def check_alerts(context: ContextTypes.DEFAULT_TYPE):
     """Проверяет активные уведомления и отправляет уведомления при срабатывании"""
@@ -54,7 +55,6 @@ async def check_alerts(context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logger.error(f"Ошибка при проверке уведомлений: {e}")
 
-# notifications.py - обновляем send_daily_rates
 async def send_daily_rates(context: ContextTypes.DEFAULT_TYPE):
     """Ежедневная рассылка основных финансовых данных"""
     try:
@@ -75,7 +75,7 @@ async def send_daily_rates(context: ContextTypes.DEFAULT_TYPE):
         key_rate_data = get_key_rate()
 
         logger.info("📊 [РАССЫЛКА КУРСОВ] Получаем ставку RUONIA...")
-        ruonia_data = get_ruonia_rate()
+        ruonia_data = get_ruonia_rate()  # Теперь функция доступна
 
         message = "🌅 <b>ЕЖЕДНЕВНАЯ ФИНАНСОВАЯ СВОДКА</b>\n\n"
 
@@ -168,7 +168,7 @@ async def send_daily_weather(context: ContextTypes.DEFAULT_TYPE):
         logger.info("🔄 [РАССЫЛКА ПОГОДЫ] Функция запущена")
 
         # Получаем только пользователей с включенными уведомлениями о погоде
-        user_ids = await get_users_with_weather_notifications()  # Теперь эта функция импортирована
+        user_ids = await get_users_with_weather_notifications()
         logger.info(f"📊 [РАССЫЛКА ПОГОДЫ] Пользователей с уведомлениями: {len(user_ids)}")
 
         if not user_ids:
