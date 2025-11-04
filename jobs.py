@@ -16,7 +16,7 @@ def setup_jobs(application):
             # Ежедневная рассылка курсов валют в 15:00 (12:00 UTC)
             job_queue.run_daily(
                 send_daily_rates,
-                time=datetime.strptime("14:24", "%H:%M").time(),
+                time=datetime.strptime("14:30", "%H:%M").time(),
                 days=(0, 1, 2, 3, 4, 5, 6),
                 name="daily_rates"
             )
