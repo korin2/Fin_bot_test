@@ -276,7 +276,7 @@ async def show_bot_about(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             f"🔄 <b>Последнее обновление:</b> {BOT_LAST_UPDATE}\n"
             f"📅 <b>Создан:</b> {BOT_CREATION_DATE}\n\n"
 
-            f"⭐ <i>Бот (создан в {BOT_CREATION_DATE.lower()}) постоянно развивается и улучшается!</i>"
+            f"⭐ <i>Бот постоянно развивается и улучшается!</i>"
         )
 
         await update.message.reply_text(message, parse_mode='HTML', reply_markup=create_other_functions_keyboard())
