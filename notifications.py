@@ -134,9 +134,9 @@ async def send_daily_rates(context: ContextTypes.DEFAULT_TYPE):
                 else:
                     comparison = "➡️ Ставки равны"
 
-                message += f"   <i>{comparison}</i>\n"
+                message += f"   \n <i>{comparison}</i>\n"
 
-        message += "\n💡 Используйте команды бота для подробной информации"
+        message += "\n💡 Используйте команды бота для подробной информации.\n"
         message += "\n🏛️ Подробнее о ставках: /keyrate"
         message += "\n📊 История RUONIA: /ruonia_history"
 
