@@ -54,6 +54,7 @@ async def check_alerts(context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logger.error(f"Ошибка при проверке уведомлений: {e}")
 
+# notifications.py - обновляем send_daily_rates
 async def send_daily_rates(context: ContextTypes.DEFAULT_TYPE):
     """Ежедневная рассылка основных финансовых данных"""
     try:
@@ -72,6 +73,9 @@ async def send_daily_rates(context: ContextTypes.DEFAULT_TYPE):
 
         logger.info("💎 [РАССЫЛКА КУРСОВ] Получаем ключевую ставку...")
         key_rate_data = get_key_rate()
+
+        logger.info("📊 [РАССЫЛКА КУРСОВ] Получаем ставку RUONIA...")
+        ruonia_data = get_ruonia_rate()
 
         message = "🌅 <b>ЕЖЕДНЕВНАЯ ФИНАНСОВАЯ СВОДКА</b>\n\n"
 
@@ -111,9 +115,30 @@ async def send_daily_rates(context: ContextTypes.DEFAULT_TYPE):
 
         # Добавляем ключевую ставку
         if key_rate_data:
-            message += f"💎 <b>Ключевая ставка:</b> {key_rate_data['rate']:.2f}%\n\n"
+            message += f"💎 <b>Ключевая ставка:</b> {key_rate_data['rate']:.2f}%\n"
 
-        message += "💡 Используйте команды бота для подробной информации"
+        # Добавляем ставку RUONIA
+        if ruonia_data:
+            message += f"📊 <b>Ставка RUONIA:</b> {ruonia_data['rate']:.2f}%\n"
+
+            # Если есть обе ставки, показываем сравнение
+            if key_rate_data and ruonia_data:
+                key_rate = key_rate_data['rate']
+                ruonia_rate = ruonia_data['rate']
+                difference = key_rate - ruonia_rate
+
+                if difference > 0:
+                    comparison = f"📈 Ключевая ставка выше на {difference:.2f}%"
+                elif difference < 0:
+                    comparison = f"📉 Ключевая ставка ниже на {abs(difference):.2f}%"
+                else:
+                    comparison = "➡️ Ставки равны"
+
+                message += f"   <i>{comparison}</i>\n"
+
+        message += "\n💡 Используйте команды бота для подробной информации"
+        message += "\n🏛️ Подробнее о ставках: /keyrate"
+        message += "\n📊 История RUONIA: /ruonia_history"
 
         logger.info(f"📝 [РАССЫЛКА КУРСОВ] Сообщение сформировано: {len(message)} символов")
         logger.info("📨 [РАССЫЛКА КУРСОВ] Начинаем отправку сообщений...")
