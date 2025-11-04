@@ -31,7 +31,8 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         alerts = await get_all_alerts()
 
         bot_info = f"🤖 <b>Информация о боте</b>\n"
-        bot_info += f"• Версия: 1.1.0\n"
+        bot_info += f"• Версия: {BOT_VERSION}\n"  # Используем из config
+        bot_info += f"• Последнее обновление: {BOT_LAST_UPDATE}\n"  # Используем из config
         bot_info += f"• Запущен: {datetime.now().strftime('%d.%m.%Y %H:%M')}\n"
         bot_info += f"• Пользователей: {len(users)}\n"
         bot_info += f"• Уведомлений: {len(alerts)}\n"

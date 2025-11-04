@@ -1,3 +1,4 @@
+# config.py - добавляем переменные версии
 import os
 import logging
 import sys
@@ -51,5 +52,7 @@ SUPPORTED_CURRENCIES = ['USD', 'EUR', 'GBP', 'JPY', 'CNY', 'CHF', 'CAD', 'AUD', 
 # Настройки погоды
 WEATHER_CITY = "Moscow"
 
-# Настройки бота
+# Настройки бота - ВЕРСИЯ И ОБНОВЛЕНИЯ
 BOT_VERSION = "1.1.0"
+BOT_LAST_UPDATE = "Ноябрь 2025"
+BOT_CREATION_DATE = "Октябрь 2025"

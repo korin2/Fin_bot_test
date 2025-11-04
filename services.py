@@ -43,6 +43,12 @@ from notifications import (
     send_daily_weather
 )
 
+from config import (
+    BOT_VERSION,
+    BOT_LAST_UPDATE,
+    BOT_CREATION_DATE
+)
+
 # Экспортируем все функции для обратной совместимости
 __all__ = [
     # Currency API
@@ -77,4 +83,11 @@ __all__ = [
     'check_alerts',
     'send_daily_rates',
     'send_daily_weather'
+
+    # Bot info
+    'BOT_VERSION',
+    'BOT_LAST_UPDATE',
+    'BOT_CREATION_DATE'
+
+
 ]

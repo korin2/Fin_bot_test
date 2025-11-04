@@ -232,10 +232,13 @@ async def show_bot_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         logger.error(f"Ошибка при показе статистики: {e}")
         await update.message.reply_text("❌ Ошибка при загрузке статистики.", reply_markup=create_other_functions_keyboard())
 
+# handlers_basic.py - обновляем show_bot_about
 async def show_bot_about(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Показывает информацию о боте"""
     try:
         log_user_action(update.effective_user.id, "view_bot_about")
+
+        from config import BOT_VERSION, BOT_LAST_UPDATE, BOT_CREATION_DATE
 
         message = (
             "ℹ️ <b>ИНФОРМАЦИЯ О БОТЕ</b>\n\n"
@@ -245,7 +248,7 @@ async def show_bot_about(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             "📚 <b>Основные возможности:</b>\n"
             "• 💱 Курсы валют ЦБ РФ с прогнозом\n"
             "• ₿ Криптовалюты через CoinGecko API\n"
-            "• 🏛️Ставки ЦБ РФ (ключевая ставка и RUONIA)\n"
+            "• 🏛️ Ставки ЦБ РФ (ключевая ставка и RUONIA)\n"
             "• 🤖 Универсальный ИИ помощник\n"
             "• 🔔 Умные уведомления\n"
             "• 🌅 Ежедневная рассылка\n\n"
@@ -262,10 +265,11 @@ async def show_bot_about(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             "• Для связи с разработчиком и сообщения об ошибках: korin2008@ya.ru\n"
             "Собрал данного бота Санёк\n\n"
 
-            "💡 <b>Версия:</b> 1.0.9\n"
-            "🔄 <b>Последнее обновление:</b> Ноябрь 2025\n\n"
+            f"💡 <b>Версия:</b> {BOT_VERSION}\n"
+            f"🔄 <b>Последнее обновление:</b> {BOT_LAST_UPDATE}\n"
+            f"📅 <b>Создан:</b> {BOT_CREATION_DATE}\n\n"
 
-            "⭐ <i>Бот (создан в октябре 2025) постоянно развивается и улучшается!</i>"
+            f"⭐ <i>Бот (создан в {BOT_CREATION_DATE.lower()}) постоянно развивается и улучшается!</i>"
         )
 
         from utils import create_other_functions_keyboard
