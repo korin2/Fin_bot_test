@@ -7,13 +7,6 @@ from telegram.ext import Application, CommandHandler, CallbackQueryHandler, Mess
 from telegram.error import Conflict
 from config import TOKEN, logger
 from db import init_db
-from cache import init_cache
-
-async def post_init(application):
-    """Инициализация после запуска бота"""
-    await init_db()
-    init_cache()  # Инициализируем кэш
-    logger.info("✅ База данных и кэш инициализированы")
 
 # Импортируем обработчики из новых модулей
 from handlers_basic import (
@@ -29,7 +22,7 @@ from handlers_alerts import (
     alert_command, myalerts_command, show_alerts_menu
 )
 from handlers_ai import show_ai_chat
-from handlers_admin import status_command, logs_command, clear_logs_command
+from handlers_admin import status_command, logs_command, clear_logs_command, cache_stats_command, refresh_cache_command, clear_cache_command  # 🔄 ДОБАВЛЯЕМ НОВЫЕ КОМАНДЫ
 from handlers_text import handle_text_messages
 from handlers_callbacks import button_handler
 from jobs import setup_jobs
@@ -37,7 +30,7 @@ from jobs import setup_jobs
 async def post_init(application):
     """Инициализация после запуска бота"""
     await init_db()
-    logger.info("База данных инициализирована")
+    logger.info("✅ База данных инициализирована")
 
     # Логируем информацию о здоровье системы
     try:
@@ -99,9 +92,9 @@ def main():
         application.add_handler(CommandHandler("status", status_command))
         application.add_handler(CommandHandler("logs", logs_command))
         application.add_handler(CommandHandler("clearlogs", clear_logs_command))
-        application.add_handler(CommandHandler("cache_stats", cache_stats_command))
-        application.add_handler(CommandHandler("refresh_cache", refresh_cache_command))
-        application.add_handler(CommandHandler("clear_cache", clear_cache_command))
+        application.add_handler(CommandHandler("cache_stats", cache_stats_command))  # 🔄 НОВАЯ КОМАНДА
+        application.add_handler(CommandHandler("refresh_cache", refresh_cache_command))  # 🔄 НОВАЯ КОМАНДА
+        application.add_handler(CommandHandler("clear_cache", clear_cache_command))  # 🔄 НОВАЯ КОМАНДА
 
         # Обработчики кнопок и сообщений
         application.add_handler(CallbackQueryHandler(button_handler))
