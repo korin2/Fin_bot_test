@@ -207,13 +207,30 @@ async def refresh_cache_command(update: Update, context: ContextTypes.DEFAULT_TY
 
         log_user_action(update.effective_user.id, "refresh_cache")
         
+        # 🔄 ОЧИЩАЕМ КЭШ
         success = force_refresh_cache()
         
         if success:
             message = (
                 "🔄 <b>КЭШ ОБНОВЛЕН</b>\n\n"
                 "✅ Все данные кэша принудительно обновлены.\n\n"
-                "💡 <i>Следующие запросы получат свежие данные от API</i>"
+                "⏳ <i>Загружаем свежие данные от API...</i>"
+            )
+            
+            await update.message.reply_text(message, parse_mode='HTML')
+            
+            # 🔄 ЗАПОЛНЯЕМ КЭШ СВЕЖИМИ ДАННЫМИ
+            await preload_cache_data()
+            
+            message = (
+                "✅ <b>КЭШ ЗАПОЛНЕН</b>\n\n"
+                "💾 Все основные данные загружены в кэш:\n"
+                "• 💱 Курсы валют ЦБ РФ\n"
+                "• 💎 Ключевая ставка\n"
+                "• 📊 RUONIA\n"
+                "• ₿ Криптовалюты\n"
+                "• 🌤️ Погода\n\n"
+                "💡 <i>Следующие запросы будут использовать свежие данные</i>"
             )
         else:
             message = "❌ <b>Ошибка при обновлении кэша</b>"
@@ -226,6 +243,56 @@ async def refresh_cache_command(update: Update, context: ContextTypes.DEFAULT_TY
     except Exception as e:
         logger.error(f"Ошибка при обновлении кэша: {e}")
         await update.message.reply_text("❌ Ошибка при обновлении кэша.")
+
+async def preload_cache_data():
+    """Предварительно загружает данные в кэш"""
+    try:
+        logger.info("🔄 Предварительная загрузка данных в кэш...")
+        
+        # 💱 Курсы валют
+        try:
+            from api_currency import get_currency_rates_with_history
+            currency_data = get_currency_rates_with_history()
+            logger.info("✅ Курсы валют загружены в кэш")
+        except Exception as e:
+            logger.error(f"❌ Ошибка загрузки курсов валют: {e}")
+        
+        # 💎 Ключевая ставка
+        try:
+            from api_keyrate import get_key_rate
+            keyrate_data = get_key_rate()
+            logger.info("✅ Ключевая ставка загружена в кэш")
+        except Exception as e:
+            logger.error(f"❌ Ошибка загрузки ключевой ставки: {e}")
+        
+        # 📊 RUONIA
+        try:
+            from api_ruonia import get_ruonia_rate
+            ruonia_data = get_ruonia_rate()
+            logger.info("✅ RUONIA загружена в кэш")
+        except Exception as e:
+            logger.error(f"❌ Ошибка загрузки RUONIA: {e}")
+        
+        # ₿ Криптовалюты
+        try:
+            from api_crypto import get_crypto_rates
+            crypto_data = get_crypto_rates()
+            logger.info("✅ Криптовалюты загружены в кэш")
+        except Exception as e:
+            logger.error(f"❌ Ошибка загрузки криптовалют: {e}")
+        
+        # 🌤️ Погода
+        try:
+            from api_weather import get_weather_moscow
+            weather_data = get_weather_moscow()
+            logger.info("✅ Погода загружена в кэш")
+        except Exception as e:
+            logger.error(f"❌ Ошибка загрузки погоды: {e}")
+        
+        logger.info("🎯 Предварительная загрузка кэша завершена")
+        
+    except Exception as e:
+        logger.error(f"❌ Ошибка предварительной загрузки кэша: {e}")
 
 async def clear_cache_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Очищает кэш"""
