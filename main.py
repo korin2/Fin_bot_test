@@ -22,12 +22,15 @@ from handlers_alerts import (
     alert_command, myalerts_command, show_alerts_menu
 )
 from handlers_ai import show_ai_chat
-from handlers_admin import status_command, logs_command, clear_logs_command, cache_stats_command, refresh_cache_command, clear_cache_command  # 🔄 ДОБАВЛЯЕМ НОВЫЕ КОМАНДЫ
+from handlers_admin import (
+    status_command, logs_command, clear_logs_command, 
+    cache_stats_command, refresh_cache_command, clear_cache_command,
+    cache_schedule_command, set_schedule_command  # 🔄 ДОБАВЛЯЕМ НОВЫЕ КОМАНДЫ
+)
 from handlers_text import handle_text_messages
 from handlers_callbacks import button_handler
 from jobs import setup_jobs
 
-# В main.py обновляем post_init
 async def post_init(application):
     """Инициализация после запуска бота"""
     await init_db()
@@ -106,11 +109,11 @@ def main():
         application.add_handler(CommandHandler("status", status_command))
         application.add_handler(CommandHandler("logs", logs_command))
         application.add_handler(CommandHandler("clearlogs", clear_logs_command))
-        application.add_handler(CommandHandler("cache_stats", cache_stats_command))  # 🔄 НОВАЯ КОМАНДА
-        application.add_handler(CommandHandler("refresh_cache", refresh_cache_command))  # 🔄 НОВАЯ КОМАНДА
-        application.add_handler(CommandHandler("clear_cache", clear_cache_command))  # 🔄 НОВАЯ КОМАНДА
-        application.add_handler(CommandHandler("cache_schedule", cache_schedule_command))  # 🔄 НОВАЯ
-        application.add_handler(CommandHandler("set_schedule", set_schedule_command))      # 🔄 НОВАЯ
+        application.add_handler(CommandHandler("cache_stats", cache_stats_command))
+        application.add_handler(CommandHandler("refresh_cache", refresh_cache_command))
+        application.add_handler(CommandHandler("clear_cache", clear_cache_command))
+        application.add_handler(CommandHandler("cache_schedule", cache_schedule_command))  # 🔄 НОВАЯ КОМАНДА
+        application.add_handler(CommandHandler("set_schedule", set_schedule_command))      # 🔄 НОВАЯ КОМАНДА
 
         # Обработчики кнопок и сообщений
         application.add_handler(CallbackQueryHandler(button_handler))
