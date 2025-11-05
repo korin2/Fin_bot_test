@@ -175,6 +175,27 @@ async def handle_text_messages(update: Update, context: ContextTypes.DEFAULT_TYP
             from handlers_ai import show_ai_chat
             await show_ai_chat(update, context)
 
+        # Обработка управления кэшем
+        elif user_message == "💾 Статистика кэша" and user_id in ADMIN_IDS:
+            from handlers_admin import cache_stats_command
+            await cache_stats_command(update, context)
+            return
+
+        elif user_message == "🔄 Обновить кэш" and user_id in ADMIN_IDS:
+            from handlers_admin import refresh_cache_command
+            await refresh_cache_command(update, context)
+            return
+
+        elif user_message == "🧹 Очистить кэш" and user_id in ADMIN_IDS:
+            from handlers_admin import clear_cache_command
+            await clear_cache_command(update, context)
+            return
+
+        elif user_message == "📊 Обновить статистику" and user_id in ADMIN_IDS:
+            from handlers_admin import cache_stats_command
+            await cache_stats_command(update, context)
+            return
+
         # Если сообщение не распознано как команда меню, пробуем обработать как запрос к ИИ
         elif context.user_data.get('ai_mode') == True:
             from handlers_ai import handle_ai_message
