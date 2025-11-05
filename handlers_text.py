@@ -38,15 +38,17 @@ async def handle_text_messages(update: Update, context: ContextTypes.DEFAULT_TYP
             await logs_command(update, context)
             return
 
-        # 🔄 ДОБАВЛЯЕМ ОБРАБОТКУ НОВОЙ КНОПКИ
-        elif user_message == "⏰ Расписание кэша" and user_id in ADMIN_IDS:
-            from handlers_admin import cache_schedule_command
-            await cache_schedule_command(update, context)
-            return
+
 
         elif user_message == "🔙 Назад к функциям":
             from handlers_basic import show_other_functions
             await show_other_functions(update, context)
+            return
+
+        # 🔄 ДОБАВЛЯЕМ ОБРАБОТКУ НОВОЙ КНОПКИ
+        elif user_message == "⏰ Расписание кэша" and user_id in ADMIN_IDS:
+            from handlers_admin import cache_schedule_command
+            await cache_schedule_command(update, context)
             return
 
         # Обработка меню уведомлений
@@ -220,7 +222,7 @@ async def handle_text_messages(update: Update, context: ContextTypes.DEFAULT_TYP
             )
             return
 
-        elif user_message == "📊 Изменить ключевую ставку" and user_id in ADMIN_IDS:
+        elif user_message == "💎 Изменить ключевую ставку" and user_id in ADMIN_IDS:
             await update.message.reply_text(
                 "📝 <b>Изменение расписания ключевой ставки</b>\n\n"
                 "💡 <b>Пример команды:</b>\n"
