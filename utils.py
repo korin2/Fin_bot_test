@@ -148,3 +148,14 @@ def create_cache_management_keyboard():
         [KeyboardButton("🔙 Назад к админ-панели")]
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+
+# В utils.py добавляем новую клавиатуру
+def create_cache_schedule_keyboard():
+    """Создает клавиатуру для управления расписанием кэша"""
+    keyboard = [
+        [KeyboardButton("💱 Изменить курс валют"), KeyboardButton("💎 Изменить ключевую ставку")],
+        [KeyboardButton("📊 Изменить RUONIA"), KeyboardButton("₿ Изменить крипту")],
+        [KeyboardButton("🌤️ Изменить погоду"), KeyboardButton("📊 Статистика кэша")],
+        [KeyboardButton("🔙 Назад к админ-панели")]
+    ]
+    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
