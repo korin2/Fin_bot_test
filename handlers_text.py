@@ -196,6 +196,62 @@ async def handle_text_messages(update: Update, context: ContextTypes.DEFAULT_TYP
             await cache_stats_command(update, context)
             return
 
+        # 🔄 ОБРАБОТКА УПРАВЛЕНИЯ РАСПИСАНИЕМ
+        elif user_message == "⏰ Расписание кэша" and user_id in ADMIN_IDS:
+            from handlers_admin import cache_schedule_command
+            await cache_schedule_command(update, context)
+            return
+
+        elif user_message == "💱 Изменить курс валют" and user_id in ADMIN_IDS:
+            await update.message.reply_text(
+                "📝 <b>Изменение расписания курсов валют</b>\n\n"
+                "💡 <b>Пример команды:</b>\n"
+                "<code>/set_schedule currency_rates 07:00,10:00,13:00,16:00,19:00</code>\n\n"
+                "🕒 <b>Текущее расписание:</b> 07:00,10:00,13:00,16:00,19:00 МСК",
+                parse_mode='HTML'
+            )
+            return
+
+        elif user_message == "💎 Изменить ключевую ставку" and user_id in ADMIN_IDS:
+            await update.message.reply_text(
+                "📝 <b>Изменение расписания ключевой ставки</b>\n\n"
+                "💡 <b>Пример команды:</b>\n"
+                "<code>/set_schedule key_rate 08:00</code>\n\n"
+                "🕒 <b>Текущее расписание:</b> 08:00 МСК",
+                parse_mode='HTML'
+            )
+            return
+
+        elif user_message == "📊 Изменить RUONIA" and user_id in ADMIN_IDS:
+            await update.message.reply_text(
+                "📝 <b>Изменение расписания RUONIA</b>\n\n"
+                "💡 <b>Пример команды:</b>\n"
+                "<code>/set_schedule ruonia_rate 08:00</code>\n\n"
+                "🕒 <b>Текущее расписание:</b> 08:00 МСК",
+                parse_mode='HTML'
+            )
+            return
+
+        elif user_message == "₿ Изменить крипту" and user_id in ADMIN_IDS:
+            await update.message.reply_text(
+                "📝 <b>Изменение расписания криптовалют</b>\n\n"
+                "💡 <b>Пример команды:</b>\n"
+                "<code>/set_schedule crypto_rates 09:00,12:00,15:00,18:00,21:00</code>\n\n"
+                "🕒 <b>Текущее расписание:</b> 09:00,12:00,15:00,18:00,21:00 МСК",
+                parse_mode='HTML'
+            )
+            return
+
+        elif user_message == "🌤️ Изменить погоду" and user_id in ADMIN_IDS:
+            await update.message.reply_text(
+                "📝 <b>Изменение расписания погоды</b>\n\n"
+                "💡 <b>Пример команды:</b>\n"
+                "<code>/set_schedule weather 06:00,12:00,18:00</code>\n\n"
+                "🕒 <b>Текущее расписание:</b> 06:00,12:00,18:00 МСК",
+                parse_mode='HTML'
+            )
+            return
+
         # Если сообщение не распознано как команда меню, пробуем обработать как запрос к ИИ
         elif context.user_data.get('ai_mode') == True:
             from handlers_ai import handle_ai_message
