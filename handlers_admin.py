@@ -6,6 +6,8 @@ from telegram import Update
 from telegram.ext import ContextTypes
 from config import logger, ADMIN_IDS, BOT_VERSION, BOT_LAST_UPDATE
 from utils import log_user_action, create_main_reply_keyboard
+from cache import get_cache_stats, force_refresh_cache, clear_cache
+
 
 async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Показывает статус бота и системную информацию"""
@@ -142,3 +144,109 @@ async def clear_logs_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
             "❌ Ошибка при очистке логов",
             reply_markup=create_main_reply_keyboard()
         )
+
+async def cache_stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Показывает статистику кэша"""
+    try:
+        if update.effective_user.id not in ADMIN_IDS:
+            await update.message.reply_text("❌ У вас нет доступа к этой функции.")
+            return
+
+        log_user_action(update.effective_user.id, "view_cache_stats")
+        
+        stats = get_cache_stats()
+        
+        message = "💾 <b>СТАТИСТИКА КЭША</b>\n\n"
+        message += f"📊 <b>Всего записей:</b> {stats['total_entries']}\n\n"
+        
+        if stats['entries']:
+            message += "📋 <b>Записи кэша:</b>\n"
+            for key, info in stats['entries'].items():
+                status = "🟢" if not info['is_expired'] else "🔴"
+                message += (
+                    f"{status} <b>{key}:</b>\n"
+                    f"   ⏱️ Возраст: {info['age_human']}\n"
+                    f"   🕒 TTL осталось: {info['remaining_ttl']} сек.\n"
+                    f"   📏 Размер: {info['data_size']} символов\n\n"
+                )
+        else:
+            message += "📭 <i>Кэш пуст</i>\n\n"
+            
+        message += "💡 <b>График обновления:</b>\n"
+        message += "• 💱 Курсы валют: каждый час\n"
+        message += "• 💎 Ключевая ставка: раз в 24 часа\n" 
+        message += "• 📊 RUONIA: раз в 24 часа\n"
+        message += "• ₿ Криптовалюты: каждые 30 минут\n"
+        message += "• 🌤️ Погода: каждые 30 минут\n\n"
+        
+        message += "🔄 <i>Используйте кнопки ниже для управления кэшем</i>"
+
+        # Клавиатура для управления кэшем
+        keyboard = [
+            [KeyboardButton("🔄 Обновить кэш")],
+            [KeyboardButton("🧹 Очистить кэш")],
+            [KeyboardButton("📊 Обновить статистику")],
+            [KeyboardButton("🔙 Назад к админ-панели")]
+        ]
+        reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+        
+        await update.message.reply_text(message, parse_mode='HTML', reply_markup=reply_markup)
+
+    except Exception as e:
+        logger.error(f"Ошибка при показе статистики кэша: {e}")
+        await update.message.reply_text("❌ Ошибка при загрузке статистики кэша.")
+
+async def refresh_cache_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Принудительно обновляет кэш"""
+    try:
+        if update.effective_user.id not in ADMIN_IDS:
+            await update.message.reply_text("❌ У вас нет доступа к этой функции.")
+            return
+
+        log_user_action(update.effective_user.id, "refresh_cache")
+        
+        success = force_refresh_cache()
+        
+        if success:
+            message = (
+                "🔄 <b>КЭШ ОБНОВЛЕН</b>\n\n"
+                "✅ Все данные кэша принудительно обновлены.\n\n"
+                "💡 <i>Следующие запросы получат свежие данные от API</i>"
+            )
+        else:
+            message = "❌ <b>Ошибка при обновлении кэша</b>"
+            
+        await update.message.reply_text(message, parse_mode='HTML')
+        
+        # Показываем обновленную статистику
+        await cache_stats_command(update, context)
+        
+    except Exception as e:
+        logger.error(f"Ошибка при обновлении кэша: {e}")
+        await update.message.reply_text("❌ Ошибка при обновлении кэша.")
+
+async def clear_cache_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Очищает кэш"""
+    try:
+        if update.effective_user.id not in ADMIN_IDS:
+            await update.message.reply_text("❌ У вас нет доступа к этой функции.")
+            return
+
+        log_user_action(update.effective_user.id, "clear_cache")
+        
+        success = clear_cache()
+        
+        if success:
+            message = (
+                "🧹 <b>КЭШ ОЧИЩЕН</b>\n\n"
+                "✅ Все данные кэша удалены.\n\n"
+                "💡 <i>Следующие запросы загрузят свежие данные от API</i>"
+            )
+        else:
+            message = "❌ <b>Ошибка при очистке кэша</b>"
+            
+        await update.message.reply_text(message, parse_mode='HTML')
+        
+    except Exception as e:
+        logger.error(f"Ошибка при очистке кэша: {e}")
+        await update.message.reply_text("❌ Ошибка при очистке кэша.")
