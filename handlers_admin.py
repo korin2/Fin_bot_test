@@ -322,3 +322,141 @@ async def clear_cache_command(update: Update, context: ContextTypes.DEFAULT_TYPE
     except Exception as e:
         logger.error(f"Ошибка при очистке кэша: {e}")
         await update.message.reply_text("❌ Ошибка при очистке кэша.")
+
+# Добавляем новые функции в handlers_admin.py
+
+async def cache_schedule_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Показывает и позволяет редактировать расписание кэша"""
+    try:
+        if update.effective_user.id not in ADMIN_IDS:
+            await update.message.reply_text("❌ У вас нет доступа к этой функции.")
+            return
+
+        log_user_action(update.effective_user.id, "view_cache_schedule")
+        
+        from cache import get_cache_schedule, update_cache_schedule
+        
+        schedule = get_cache_schedule()
+        
+        message = "⏰ <b>РАСПИСАНИЕ ОБНОВЛЕНИЯ КЭША</b>\n\n"
+        message += "<i>Текущее расписание (Московское время):</i>\n\n"
+        
+        for key, times in schedule.items():
+            emoji = {
+                'currency_rates': '💱',
+                'key_rate': '💎', 
+                'ruonia_rate': '📊',
+                'crypto_rates': '₿',
+                'weather': '🌤️'
+            }.get(key, '📝')
+            
+            key_name = {
+                'currency_rates': 'Курсы валют',
+                'key_rate': 'Ключевая ставка',
+                'ruonia_rate': 'RUONIA',
+                'crypto_rates': 'Криптовалюты',
+                'weather': 'Погода'
+            }.get(key, key)
+            
+            message += f"{emoji} <b>{key_name}:</b>\n"
+            if times:
+                message += f"   🕒 {', '.join(times)} МСК\n"
+            else:
+                message += f"   ⚠️ Не настроено\n"
+            message += "\n"
+        
+        message += "💡 <b>Формат времени:</b> ЧЧ:ММ (24-часовой формат)\n"
+        message += "📝 <b>Пример команды для изменения:</b>\n"
+        message += "<code>/set_schedule currency_rates 07:00,10:00,13:00,16:00</code>\n\n"
+        message += "🔄 <i>Используйте кнопки ниже для управления</i>"
+
+        keyboard = [
+            [KeyboardButton("💱 Изменить курс валют"), KeyboardButton("💎 Изменить ключевую ставку")],
+            [KeyboardButton("📊 Изменить RUONIA"), KeyboardButton("₿ Изменить крипту")],
+            [KeyboardButton("🌤️ Изменить погоду"), KeyboardButton("📊 Статистика кэша")],
+            [KeyboardButton("🔙 Назад к админ-панели")]
+        ]
+        reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+        
+        await update.message.reply_text(message, parse_mode='HTML', reply_markup=reply_markup)
+
+    except Exception as e:
+        logger.error(f"Ошибка при показе расписания кэша: {e}")
+        await update.message.reply_text("❌ Ошибка при загрузке расписания.")
+
+async def set_schedule_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Устанавливает расписание для конкретного типа данных"""
+    try:
+        if update.effective_user.id not in ADMIN_IDS:
+            await update.message.reply_text("❌ У вас нет доступа к этой функции.")
+            return
+
+        if not context.args or len(context.args) < 2:
+            await update.message.reply_text(
+                "📝 <b>Использование:</b>\n"
+                "<code>/set_schedule &lt;тип&gt; &lt;время1&gt;,&lt;время2&gt;,...</code>\n\n"
+                "💡 <b>Примеры:</b>\n"
+                "<code>/set_schedule currency_rates 07:00,10:00,13:00,16:00</code>\n"
+                "<code>/set_schedule key_rate 08:00</code>\n"
+                "<code>/set_schedule crypto_rates 09:00,12:00,15:00,18:00,21:00</code>\n\n"
+                "📋 <b>Доступные типы:</b>\n"
+                "• currency_rates - Курсы валют\n"
+                "• key_rate - Ключевая ставка\n" 
+                "• ruonia_rate - RUONIA\n"
+                "• crypto_rates - Криптовалюты\n"
+                "• weather - Погода",
+                parse_mode='HTML'
+            )
+            return
+
+        key_type = context.args[0].lower()
+        times_str = context.args[1]
+        
+        # Валидация типа
+        valid_types = ['currency_rates', 'key_rate', 'ruonia_rate', 'crypto_rates', 'weather']
+        if key_type not in valid_types:
+            await update.message.reply_text(
+                f"❌ Неверный тип данных. Доступные: {', '.join(valid_types)}"
+            )
+            return
+        
+        # Парсим времена
+        times = [t.strip() for t in times_str.split(',')]
+        
+        # Валидация формата времени
+        for time_str in times:
+            try:
+                datetime.strptime(time_str, '%H:%M')
+            except ValueError:
+                await update.message.reply_text(
+                    f"❌ Неверный формат времени: {time_str}\n"
+                    "💡 Используйте формат ЧЧ:ММ (например, 08:00)"
+                )
+                return
+        
+        from cache import update_cache_schedule
+        success = update_cache_schedule(key_type, times)
+        
+        if success:
+            key_names = {
+                'currency_rates': 'Курсы валют',
+                'key_rate': 'Ключевая ставка',
+                'ruonia_rate': 'RUONIA',
+                'crypto_rates': 'Криптовалюты',
+                'weather': 'Погода'
+            }
+            
+            message = (
+                f"✅ <b>РАСПИСАНИЕ ОБНОВЛЕНО</b>\n\n"
+                f"📝 <b>{key_names.get(key_type, key_type)}</b>\n"
+                f"🕒 <b>Новое расписание:</b> {', '.join(times)} МСК\n\n"
+                f"💡 <i>Кэш будет автоматически обновляться в указанное время</i>"
+            )
+        else:
+            message = "❌ <b>Ошибка при обновлении расписания</b>"
+            
+        await update.message.reply_text(message, parse_mode='HTML')
+        
+    except Exception as e:
+        logger.error(f"Ошибка при установке расписания: {e}")
+        await update.message.reply_text("❌ Ошибка при установке расписания.")
