@@ -18,7 +18,7 @@ async def handle_text_messages(update: Update, context: ContextTypes.DEFAULT_TYP
         logger.info(f"Получено сообщение: '{user_message}' от пользователя {user_id}")
 
         # Обработка административных функций
-        elif user_message == "👑 Админ-панель" and user_id in ADMIN_IDS:
+        if user_message == "👑 Админ-панель" and user_id in ADMIN_IDS:
             from handlers_basic import show_admin_panel
             await show_admin_panel(update, context)
             return
