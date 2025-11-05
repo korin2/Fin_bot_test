@@ -7,6 +7,13 @@ from telegram.ext import Application, CommandHandler, CallbackQueryHandler, Mess
 from telegram.error import Conflict
 from config import TOKEN, logger
 from db import init_db
+from cache import init_cache
+
+async def post_init(application):
+    """Инициализация после запуска бота"""
+    await init_db()
+    init_cache()  # Инициализируем кэш
+    logger.info("✅ База данных и кэш инициализированы")
 
 # Импортируем обработчики из новых модулей
 from handlers_basic import (
