@@ -27,6 +27,7 @@ from handlers_text import handle_text_messages
 from handlers_callbacks import button_handler
 from jobs import setup_jobs
 
+# В main.py обновляем post_init
 async def post_init(application):
     """Инициализация после запуска бота"""
     await init_db()
@@ -36,6 +37,11 @@ async def post_init(application):
         from cache import init_cache
         init_cache()
         logger.info("✅ База данных и кэш инициализированы")
+        
+        # 🔄 ПРЕДВАРИТЕЛЬНО ЗАГРУЖАЕМ ДАННЫЕ В КЭШ ПРИ ЗАПУСКЕ
+        from handlers_admin import preload_cache_data
+        await preload_cache_data()
+        
     except Exception as e:
         logger.error(f"❌ Ошибка инициализации кэша: {e}")
         logger.info("✅ База данных инициализирована (кэш отключен)")
