@@ -1,8 +1,12 @@
+# api_currency.py
 import requests
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
 import logging
 from config import CBR_API_BASE, logger
+
+# 🔄 ДОБАВЛЯЕМ ИМПОРТ ДЛЯ КЭШИРОВАНИЯ
+from cache import get_cache, set_cache
 
 def get_currency_rates_for_date(date_req):
     """Получает курсы валют на определенную дату"""
@@ -48,8 +52,20 @@ def get_currency_rates_for_date(date_req):
         return None, None
 
 def get_currency_rates_with_history():
-    """Получает курсы валют на сегодня, вчера и завтра (если доступно)"""
+    """Получает курсы валют на сегодня, вчера и завтра (если доступно) С КЭШИРОВАНИЕМ"""
     try:
+        # 🎯 КЛЮЧЕВОЕ ИЗМЕНЕНИЕ: ПРОВЕРЯЕМ КЭШ ПЕРВЫМ ДЕЛОМ
+        cache_key = "currency_rates_with_history"
+        cached_data = get_cache(cache_key)
+        
+        # ✅ ЕСЛИ ДАННЫЕ ЕСТЬ В КЭШЕ - ВОЗВРАЩАЕМ ИХ
+        if cached_data:
+            logger.info("💾 Используются кэшированные данные курсов валют")
+            return cached_data
+        
+        # 🔄 ЕСЛИ ДАННЫХ НЕТ В КЭШЕ - ЗАПРАШИВАЕМ У API
+        logger.info("🌐 Запрашиваем свежие данные курсов валют у ЦБ РФ")
+        
         today = datetime.now()
         yesterday = today - timedelta(days=1)
         tomorrow = today + timedelta(days=1)
@@ -62,7 +78,7 @@ def get_currency_rates_with_history():
         # Получаем курсы на сегодня
         rates_today, date_today_str = get_currency_rates_for_date(date_today)
         if not rates_today:
-            return {}, 'неизвестная дата', None, None, None
+            return {}, 'неизвестная дата', None, None, None, None
         
         # Получаем курсы на вчера
         rates_yesterday, date_yesterday_str = get_currency_rates_for_date(date_yesterday)
@@ -102,12 +118,79 @@ def get_currency_rates_with_history():
                         'tomorrow_value': tomorrow_value
                     }
         
-        return rates_today, date_today_str, rates_yesterday, changes_yesterday, rates_tomorrow, changes_tomorrow
+        # 📦 ФОРМИРУЕМ РЕЗУЛЬТАТ
+        result = (
+            rates_today, 
+            date_today_str, 
+            rates_yesterday, 
+            changes_yesterday, 
+            rates_tomorrow, 
+            changes_tomorrow
+        )
+        
+        # 💾 СОХРАНЯЕМ РЕЗУЛЬТАТ В КЭШ
+        set_cache(cache_key, result)
+        logger.info("💾 Данные курсов валют сохранены в кэш на 1 час")
+        
+        return result
         
     except Exception as e:
         logger.error(f"Ошибка при получении курсов с историей: {e}")
         return {}, 'неизвестная дата', None, None, None, None
 
+# 🔄 ОБНОВЛЯЕМ ФУНКЦИЮ ДЛЯ ОБРАТНОЙ СОВМЕСТИМОСТИ
+def get_currency_rates_with_tomorrow():
+    """Совместимая функция для старых вызовов С КЭШИРОВАНИЕМ"""
+    try:
+        # 🎯 ТАКЖЕ ИСПОЛЬЗУЕМ КЭШИРОВАНИЕ
+        cache_key = "currency_rates_tomorrow"
+        cached_data = get_cache(cache_key)
+        
+        if cached_data:
+            logger.info("💾 Используются кэшированные данные курсов (совместимость)")
+            return cached_data
+        
+        # Получаем данные через основную функцию (которая уже кэшируется)
+        rates_today, date_today, _, _, rates_tomorrow, changes_tomorrow = get_currency_rates_with_history()
+        
+        # Конвертируем changes_tomorrow в старый формат
+        changes = {}
+        if changes_tomorrow:
+            for currency, change_info in changes_tomorrow.items():
+                changes[currency] = {
+                    'change': change_info['change'],
+                    'change_percent': change_info['change_percent']
+                }
+        
+        result = (rates_today, date_today, rates_tomorrow, changes)
+        
+        # Сохраняем в кэш
+        set_cache(cache_key, result)
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"Ошибка в совместимой функции: {e}")
+        return {}, 'неизвестная дата', None, {}
+
+# 🔧 ДОБАВЛЯЕМ ФУНКЦИЮ ПРИНУДИТЕЛЬНОГО ОБНОВЛЕНИЯ
+def refresh_currency_cache():
+    """Принудительно обновляет кэш курсов валют"""
+    try:
+        from cache import force_refresh_cache
+        
+        # Очищаем кэш для курсов валют
+        force_refresh_cache("currency_rates_with_history")
+        force_refresh_cache("currency_rates_tomorrow")
+        
+        logger.info("🔄 Кэш курсов валют принудительно обновлен")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Ошибка при обновлении кэша курсов: {e}")
+        return False
+
+# 📝 ОСТАВЛЯЕМ ФУНКЦИЮ ФОРМАТИРОВАНИЯ БЕЗ ИЗМЕНЕНИЙ
 def format_currency_rates_message(rates_today: dict, date_today: str, 
                                 rates_yesterday: dict = None, changes_yesterday: dict = None,
                                 rates_tomorrow: dict = None, changes_tomorrow: dict = None) -> str:
@@ -125,7 +208,7 @@ def format_currency_rates_message(rates_today: dict, date_today: str,
             data = rates_today[currency]
             
             message += f"💵 <b>{data['name']}</b> ({currency}):\n"
-            message += f"   <b>Сегодня: {data['value']:.2f} руб.</b>\n"  # Добавили "Сегодня:"
+            message += f"   <b>Сегодня: {data['value']:.2f} руб.</b>\n"
             
             # Показываем вчерашний курс и изменение
             if changes_yesterday and currency in changes_yesterday:
@@ -153,7 +236,7 @@ def format_currency_rates_message(rates_today: dict, date_today: str,
             message += "\n"
     
     # Другие валюты - AED будет первым в списке
-    other_currencies = ['AED']  # Сначала AED
+    other_currencies = ['AED']
     other_currencies.extend([curr for curr in rates_today.keys() 
                            if curr not in main_currencies and curr != 'AED'])
     
@@ -186,21 +269,7 @@ def format_currency_rates_message(rates_today: dict, date_today: str,
     else:
         message += f"\n💡 <i>Курсы на завтра будут опубликованы ЦБ РФ позже</i>"
     
-    message += f"\n\n💡 <i>Официальные курсы ЦБ РФ с историей изменений</i>"
+    # 🔄 ДОБАВЛЯЕМ ИНФОРМАЦИЮ О КЭШИРОВАНИИ
+    message += f"\n\n💾 <i>Данные обновляются каждые 60 минут</i>"
+    
     return message
-
-# Функция для обратной совместимости
-def get_currency_rates_with_tomorrow():
-    """Совместимая функция для старых вызовов"""
-    rates_today, date_today, _, _, rates_tomorrow, changes_tomorrow = get_currency_rates_with_history()
-    
-    # Конвертируем changes_tomorrow в старый формат
-    changes = {}
-    if changes_tomorrow:
-        for currency, change_info in changes_tomorrow.items():
-            changes[currency] = {
-                'change': change_info['change'],
-                'change_percent': change_info['change_percent']
-            }
-    
-    return rates_today, date_today, rates_tomorrow, changes
