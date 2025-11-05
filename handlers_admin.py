@@ -316,6 +316,9 @@ async def clear_cache_command(update: Update, context: ContextTypes.DEFAULT_TYPE
             
         await update.message.reply_text(message, parse_mode='HTML')
         
+        # 🔄 ПОКАЗЫВАЕМ СТАТИСТИКУ ПОСЛЕ ОЧИСТКИ
+        await cache_stats_command(update, context)
+        
     except Exception as e:
         logger.error(f"Ошибка при очистке кэша: {e}")
         await update.message.reply_text("❌ Ошибка при очистке кэша.")
