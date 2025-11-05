@@ -126,12 +126,24 @@ def create_alert_direction_keyboard():
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
+
 def create_admin_functions_keyboard():
     """Создает клавиатуру для административных функций"""
     keyboard = [
         [KeyboardButton("📊 Статистика системы")],
+        [KeyboardButton("💾 Статистика кэша")],  # Новая кнопка
         [KeyboardButton("🔧 Настройки бота")],
         [KeyboardButton("📋 Логи бота")],
         [KeyboardButton("🔙 Назад к функциям")]
+    ]
+    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+
+def create_cache_management_keyboard():
+    """Создает клавиатуру для управления кэшем"""
+    keyboard = [
+        [KeyboardButton("🔄 Обновить кэш")],
+        [KeyboardButton("🧹 Очистить кэш")],
+        [KeyboardButton("📊 Обновить статистику")],
+        [KeyboardButton("🔙 Назад к админ-панели")]
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
