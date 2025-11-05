@@ -2,12 +2,14 @@ import logging
 import psutil
 import platform
 from datetime import datetime
-from telegram import Update
+from telegram import Update, KeyboardButton, ReplyKeyboardMarkup  # 🔄 ДОБАВЛЯЕМ ИМПОРТ
 from telegram.ext import ContextTypes
 from config import logger, ADMIN_IDS, BOT_VERSION, BOT_LAST_UPDATE
-from utils import log_user_action, create_main_reply_keyboard
-from cache import get_cache_stats, force_refresh_cache, clear_cache
+from utils import log_user_action, create_main_reply_keyboard, create_admin_functions_keyboard
+from db import update_user_info
 
+# 🔄 ДОБАВЛЯЕМ ИМПОРТ ДЛЯ КЭШИРОВАНИЯ
+from cache import get_cache_stats, force_refresh_cache, clear_cache
 
 async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Показывает статус бота и системную информацию"""
@@ -45,7 +47,7 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
         # Проверка ЦБ РФ
         try:
-            from services import get_currency_rates_for_date
+            from api_currency import get_currency_rates_for_date
             rates, _ = get_currency_rates_for_date(datetime.now().strftime('%d/%m/%Y'))
             services_info += "• ЦБ РФ: ✅ Работает\n"
         except:
@@ -53,7 +55,7 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
         # Проверка CoinGecko
         try:
-            from services import get_crypto_rates
+            from api_crypto import get_crypto_rates
             crypto_data = get_crypto_rates()
             services_info += "• CoinGecko: ✅ Работает\n" if crypto_data else "• CoinGecko: ❌ Ошибка\n"
         except:
@@ -181,7 +183,7 @@ async def cache_stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         
         message += "🔄 <i>Используйте кнопки ниже для управления кэшем</i>"
 
-        # Клавиатура для управления кэшем
+        # 🔄 ИСПОЛЬЗУЕМ KeyboardButton И ReplyKeyboardMarkup
         keyboard = [
             [KeyboardButton("🔄 Обновить кэш")],
             [KeyboardButton("🧹 Очистить кэш")],
