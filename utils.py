@@ -2,6 +2,7 @@ import logging
 import json
 from datetime import datetime
 from telegram import InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -34,15 +35,49 @@ def create_back_button():
     from telegram import InlineKeyboardButton
     return InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Назад в меню", callback_data='back_to_main')]])
 
-def log_user_action(user_id: int, action: str, details: dict = None):
-    """Логирование действий пользователя"""
-    log_entry = {
-        'timestamp': datetime.now().isoformat(),
-        'user_id': user_id,
-        'action': action,
-        'details': details or {}
-    }
-    logger.info(f"USER_ACTION: {json.dumps(log_entry)}")
+async def log_user_action(user_id: int, action: str, details: dict = None):
+    """Логирование действий пользователя в файл и базу данных"""
+    try:
+        # Логирование в файл (существующая функциональность)
+        log_entry = {
+            'timestamp': datetime.now().isoformat(),
+            'user_id': user_id,
+            'action': action,
+            'details': details or {}
+        }
+        logger.info(f"USER_ACTION: {json.dumps(log_entry)}")
+
+        # 🔄 Логирование в базу данных (новая функциональность)
+        # Определяем тип действия на основе названия
+        action_type = 'other'
+        action_name = action
+
+        if 'view_' in action:
+            action_type = 'view'
+        elif 'create_' in action or 'add_' in action:
+            action_type = 'create'
+        elif 'delete_' in action or 'remove_' in action or 'clear_' in action:
+            action_type = 'delete'
+        elif 'update_' in action or 'edit_' in action:
+            action_type = 'update'
+        elif 'start' in action or 'stop' in action:
+            action_type = 'system'
+        elif 'ai_' in action or 'chat' in action:
+            action_type = 'ai'
+        elif 'alert' in action:
+            action_type = 'alert'
+        elif 'text_message' in action:
+            action_type = 'message'
+
+        # Логируем в базу данных асинхронно
+        try:
+            from db import log_user_action as db_log_action
+            await db_log_action(user_id, action_type, action_name, details)
+        except Exception as e:
+            logger.error(f"Ошибка при логировании в базу данных: {e}")
+
+    except Exception as e:
+        logger.error(f"Ошибка при логировании действия пользователя: {e}")
 
 def create_main_reply_keyboard():
     """Создает главное reply-меню"""
@@ -131,6 +166,7 @@ def create_admin_functions_keyboard():
     """Создает клавиатуру для административных функций"""
     keyboard = [
         [KeyboardButton("📊 Статистика системы")],
+        [KeyboardButton("📊 Действия пользователей")],
         [KeyboardButton("💾 Статистика кэша")],
         [KeyboardButton("⏰ Расписание кэша")],
         [KeyboardButton("🔧 Настройки бота")],
@@ -157,6 +193,16 @@ def create_cache_schedule_keyboard():
         [KeyboardButton("💱 Изменить курс валют"), KeyboardButton("💎 Изменить ключевую ставку")],
         [KeyboardButton("📊 Изменить RUONIA"), KeyboardButton("₿ Изменить крипту")],
         [KeyboardButton("🌤️ Изменить погоду"), KeyboardButton("📊 Статистика кэша")],
+        [KeyboardButton("🔙 Назад к админ-панели")]
+    ]
+    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+
+def create_user_stats_keyboard():
+    """Создает клавиатуру для управления статистикой пользователей"""
+    keyboard = [
+        [KeyboardButton("📈 Общая статистика")],
+        [KeyboardButton("👤 Детали по пользователю")],
+        [KeyboardButton("🔄 Обновить статистику")],
         [KeyboardButton("🔙 Назад к админ-панели")]
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)

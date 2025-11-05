@@ -269,6 +269,35 @@ async def handle_text_messages(update: Update, context: ContextTypes.DEFAULT_TYP
             )
             return
 
+                # В handlers_text.py добавляем обработку статистики
+        elif user_message == "📊 Действия пользователей" and user_id in ADMIN_IDS:
+            from handlers_admin import user_stats_command
+            await user_stats_command(update, context)
+            return
+
+        elif user_message == "📈 Общая статистика" and user_id in ADMIN_IDS:
+            from handlers_admin import user_stats_command
+            await user_stats_command(update, context)
+            return
+
+        elif user_message == "👤 Детали по пользователю" and user_id in ADMIN_IDS:
+            await update.message.reply_text(
+                "📝 <b>Просмотр детальной статистики пользователя</b>\n\n"
+                "💡 <b>Использование команды:</b>\n"
+                "<code>/user_detail &lt;user_id&gt;</code>\n\n"
+                "👥 <b>Пример:</b>\n"
+                "<code>/user_detail 661920</code>\n\n"
+                "🆔 <b>Как получить ID пользователя:</b>\n"
+                "Пользователь должен отправить команду <code>/myid</code>",
+                parse_mode='HTML'
+            )
+            return
+
+        elif user_message == "🔄 Обновить статистику" and user_id in ADMIN_IDS:
+            from handlers_admin import user_stats_command
+            await user_stats_command(update, context)
+            return
+
         # Если сообщение не распознано как команда меню, пробуем обработать как запрос к ИИ
         elif context.user_data.get('ai_mode') == True:
             from handlers_ai import handle_ai_message

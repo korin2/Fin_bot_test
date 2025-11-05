@@ -23,9 +23,10 @@ from handlers_alerts import (
 )
 from handlers_ai import show_ai_chat
 from handlers_admin import (
-    status_command, logs_command, clear_logs_command, 
+    status_command, logs_command, clear_logs_command,
     cache_stats_command, refresh_cache_command, clear_cache_command,
-    cache_schedule_command, set_schedule_command  # 🔄 ДОБАВЛЯЕМ НОВЫЕ КОМАНДЫ
+    cache_schedule_command, set_schedule_command,
+    user_stats_command, detailed_user_stats_command # 🔄 ДОБАВЛЯЕМ НОВЫЕ КОМАНДЫ
 )
 from handlers_text import handle_text_messages
 from handlers_callbacks import button_handler
@@ -34,17 +35,17 @@ from jobs import setup_jobs
 async def post_init(application):
     """Инициализация после запуска бота"""
     await init_db()
-    
+
     # 🔄 ИНИЦИАЛИЗИРУЕМ КЭШ
     try:
         from cache import init_cache
         init_cache()
         logger.info("✅ База данных и кэш инициализированы")
-        
+
         # 🔄 ПРЕДВАРИТЕЛЬНО ЗАГРУЖАЕМ ДАННЫЕ В КЭШ ПРИ ЗАПУСКЕ
         from handlers_admin import preload_cache_data
         await preload_cache_data()
-        
+
     except Exception as e:
         logger.error(f"❌ Ошибка инициализации кэша: {e}")
         logger.info("✅ База данных инициализирована (кэш отключен)")
@@ -113,7 +114,9 @@ def main():
         application.add_handler(CommandHandler("refresh_cache", refresh_cache_command))
         application.add_handler(CommandHandler("clear_cache", clear_cache_command))
         application.add_handler(CommandHandler("cache_schedule", cache_schedule_command))  # 🔄 НОВАЯ КОМАНДА
-        application.add_handler(CommandHandler("set_schedule", set_schedule_command))      # 🔄 НОВАЯ КОМАНДА
+        application.add_handler(CommandHandler("set_schedule", set_schedule_command))
+        application.add_handler(CommandHandler("user_stats", user_stats_command))  # 🔄 НОВАЯ
+        application.add_handler(CommandHandler("user_detail", detailed_user_stats_command))  # 🔄 НОВАЯ# 🔄 НОВАЯ КОМАНДА
 
         # Обработчики кнопок и сообщений
         application.add_handler(CallbackQueryHandler(button_handler))

@@ -2,14 +2,26 @@ import logging
 import psutil
 import platform
 from datetime import datetime
-from telegram import Update, KeyboardButton, ReplyKeyboardMarkup  # 🔄 ДОБАВЛЯЕМ ИМПОРТ
+from telegram import Update, KeyboardButton, ReplyKeyboardMarkup
 from telegram.ext import ContextTypes
 from config import logger, ADMIN_IDS, BOT_VERSION, BOT_LAST_UPDATE
 from utils import log_user_action, create_main_reply_keyboard, create_admin_functions_keyboard
-from db import update_user_info
+from db import update_user_info, get_user_actions_stats, get_user_detailed_stats, get_user_info
 
 # 🔄 ДОБАВЛЯЕМ ИМПОРТ ДЛЯ КЭШИРОВАНИЯ
 from cache import get_cache_stats, force_refresh_cache, clear_cache
+
+# 🔄 ДОБАВЛЯЕМ ФУНКЦИЮ ДЛЯ КЛАВИАТУРЫ СТАТИСТИКИ
+def create_user_stats_keyboard():
+    """Создает клавиатуру для управления статистикой пользователей"""
+    keyboard = [
+        [KeyboardButton("📈 Общая статистика")],
+        [KeyboardButton("👤 Детали по пользователю")],
+        [KeyboardButton("🔄 Обновить статистику")],
+        [KeyboardButton("🔙 Назад к админ-панели")]
+    ]
+    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+
 
 async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Показывает статус бота и системную информацию"""
@@ -485,3 +497,243 @@ async def set_schedule_command(update: Update, context: ContextTypes.DEFAULT_TYP
     except Exception as e:
         logger.error(f"Ошибка при установке расписания: {e}")
         await update.message.reply_text("❌ Ошибка при установке расписания.")
+
+# В handlers_admin.py добавляем новые функции
+async def user_stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Показывает статистику использования бота пользователями"""
+    try:
+        if update.effective_user.id not in ADMIN_IDS:
+            await update.message.reply_text("❌ У вас нет доступа к этой функции.")
+            return
+
+        log_user_action(update.effective_user.id, "view_user_stats")
+
+        # Получаем статистику за последние 30 дней
+        stats = await get_user_actions_stats(30)
+
+        if not stats or not stats.get('total_stats'):
+            await update.message.reply_text(
+                "📊 <b>СТАТИСТИКА ПОЛЬЗОВАТЕЛЕЙ</b>\n\n"
+                "📭 <i>Нет данных для отображения</i>\n\n"
+                "💡 <i>Статистика собирается с момента добавления этой функции</i>",
+                parse_mode='HTML',
+                reply_markup=create_user_stats_keyboard()
+            )
+            return
+
+        total_stats = stats['total_stats']
+        action_type_stats = stats['action_type_stats']
+        popular_actions = stats['popular_actions']
+        daily_activity = stats['daily_activity']
+        active_users = stats['active_users']
+
+        message = "📊 <b>СТАТИСТИКА ИСПОЛЬЗОВАНИЯ БОТА</b>\n\n"
+
+        # Общая статистика
+        message += "👥 <b>Общая статистика (30 дней):</b>\n"
+        message += f"• Всего действий: <b>{total_stats.get('total_actions', 0)}</b>\n"
+        message += f"• Уникальных пользователей: <b>{total_stats.get('unique_users', 0)}</b>\n"
+
+        # Форматируем даты
+        first_action = total_stats.get('first_action')
+        last_action = total_stats.get('last_action')
+
+        if first_action:
+            first_action_str = first_action.strftime('%d.%m.%Y %H:%M') if hasattr(first_action, 'strftime') else str(first_action)
+            message += f"• Первое действие: <b>{first_action_str}</b>\n"
+        else:
+            message += f"• Первое действие: <b>N/A</b>\n"
+
+        if last_action:
+            last_action_str = last_action.strftime('%d.%m.%Y %H:%M') if hasattr(last_action, 'strftime') else str(last_action)
+            message += f"• Последнее действие: <b>{last_action_str}</b>\n"
+        else:
+            message += f"• Последнее действие: <b>N/A</b>\n"
+
+        message += "\n"
+
+        # Статистика по типам действий
+        message += "🎯 <b>Действия по типам:</b>\n"
+        for action_type in action_type_stats[:8]:  # Показываем топ-8
+            emoji = {
+                'view': '👀',
+                'create': '➕',
+                'delete': '🗑️',
+                'update': '✏️',
+                'system': '⚙️',
+                'ai': '🤖',
+                'alert': '🔔',
+                'message': '💬'
+            }.get(action_type['action_type'], '📝')
+
+            type_name = {
+                'view': 'Просмотры',
+                'create': 'Создание',
+                'delete': 'Удаление',
+                'update': 'Обновление',
+                'system': 'Системные',
+                'ai': 'ИИ помощник',
+                'alert': 'Уведомления',
+                'message': 'Сообщения'
+            }.get(action_type['action_type'], action_type['action_type'])
+
+            message += f"{emoji} <b>{type_name}:</b> {action_type['action_count']} ({action_type['unique_users']} пользователей)\n"
+
+        message += "\n"
+
+        # Самые популярные действия
+        message += "🔥 <b>Самые популярные действия:</b>\n"
+        for i, action in enumerate(popular_actions[:5], 1):
+            action_name = action['action_name'].replace('_', ' ').title()
+            message += f"{i}. {action_name}: <b>{action['action_count']}</b> раз\n"
+
+        message += "\n"
+
+        # Самые активные пользователи
+        message += "🏆 <b>Самые активные пользователи:</b>\n"
+        for i, user in enumerate(active_users[:3], 1):
+            user_info = f"User_{user['user_id']}"
+            try:
+                user_data = await get_user_info(user['user_id'])
+                if user_data and user_data.get('username'):
+                    user_info = f"@{user_data['username']}"
+                elif user_data and user_data.get('first_name'):
+                    user_info = user_data['first_name']
+            except:
+                pass
+
+            message += f"{i}. {user_info}: <b>{user['action_count']}</b> действий\n"
+
+        message += "\n💡 <i>Используйте кнопки ниже для детальной статистики</i>"
+
+        await update.message.reply_text(
+            message,
+            parse_mode='HTML',
+            reply_markup=create_user_stats_keyboard()
+        )
+
+    except Exception as e:
+        logger.error(f"Ошибка при показе статистики пользователей: {e}")
+        await update.message.reply_text("❌ Ошибка при загрузке статистики.")
+
+async def detailed_user_stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Показывает детальную статистику по конкретному пользователю"""
+    try:
+        if update.effective_user.id not in ADMIN_IDS:
+            await update.message.reply_text("❌ У вас нет доступа к этой функции.")
+            return
+
+        if not context.args:
+            await update.message.reply_text(
+                "📝 <b>Использование:</b>\n"
+                "<code>/user_detail &lt;user_id&gt;</code>\n\n"
+                "💡 <b>Пример:</b>\n"
+                "<code>/user_detail 661920</code>\n\n"
+                "👥 <b>Чтобы получить ID пользователя:</b>\n"
+                "Попросите пользователя отправить команду <code>/myid</code>",
+                parse_mode='HTML'
+            )
+            return
+
+        user_id = int(context.args[0])
+        log_user_action(update.effective_user.id, "view_user_detail", {"target_user_id": user_id})
+
+        # Получаем детальную статистику пользователя
+        stats = await get_user_detailed_stats(user_id, 30)
+
+        if not stats or not stats.get('user_stats'):
+            await update.message.reply_text(
+                f"❌ <b>Статистика не найдена</b>\n\n"
+                f"Пользователь <b>{user_id}</b> не совершал действий за последние 30 дней.",
+                parse_mode='HTML'
+            )
+            return
+
+        user_stats = stats['user_stats']
+        user_actions_by_type = stats['user_actions_by_type']
+        recent_actions = stats['recent_actions']
+
+        # Получаем информацию о пользователе
+        user_info = "Неизвестный пользователь"
+        try:
+            user_data = await get_user_info(user_id)
+            if user_data:
+                username = f" @{user_data['username']}" if user_data.get('username') else ""
+                user_info = f"{user_data.get('first_name', 'Пользователь')}{username}"
+        except:
+            pass
+
+        message = f"👤 <b>ДЕТАЛЬНАЯ СТАТИСТИКА</b>\n\n"
+        message += f"<b>Пользователь:</b> {user_info} (ID: {user_id})\n\n"
+
+        # Общая статистика
+        message += "📈 <b>Общая активность (30 дней):</b>\n"
+        message += f"• Всего действий: <b>{user_stats.get('total_actions', 0)}</b>\n"
+        message += f"• Уникальных типов действий: <b>{user_stats.get('unique_action_types', 0)}</b>\n"
+        message += f"• Уникальных действий: <b>{user_stats.get('unique_actions', 0)}</b>\n"
+
+        # Форматируем даты
+        first_action = user_stats.get('first_action')
+        last_action = user_stats.get('last_action')
+
+        if first_action:
+            first_action_str = first_action.strftime('%d.%m.%Y %H:%M') if hasattr(first_action, 'strftime') else str(first_action)
+            message += f"• Первое действие: <b>{first_action_str}</b>\n"
+        else:
+            message += f"• Первое действие: <b>N/A</b>\n"
+
+        if last_action:
+            last_action_str = last_action.strftime('%d.%m.%Y %H:%M') if hasattr(last_action, 'strftime') else str(last_action)
+            message += f"• Последнее действие: <b>{last_action_str}</b>\n"
+        else:
+            message += f"• Последнее действие: <b>N/A</b>\n"
+
+        message += "\n"
+
+        # Действия по типам
+        message += "🎯 <b>Действия по типам:</b>\n"
+        for action_type in user_actions_by_type:
+            type_name = {
+                'view': '👀 Просмотры',
+                'create': '➕ Создание',
+                'delete': '🗑️ Удаление',
+                'update': '✏️ Обновление',
+                'system': '⚙️ Системные',
+                'ai': '🤖 ИИ помощник',
+                'alert': '🔔 Уведомления',
+                'message': '💬 Сообщения'
+            }.get(action_type['action_type'], f"📝 {action_type['action_type']}")
+
+            message += f"• {type_name}: <b>{action_type['action_count']}</b> действий\n"
+
+        message += "\n"
+
+        # Последние действия
+        message += "🕒 <b>Последние действия:</b>\n"
+        for i, action in enumerate(recent_actions[:5], 1):
+            action_name = action['action_name'].replace('_', ' ').title()
+            action_time = action['created_at']
+
+            if hasattr(action_time, 'strftime'):
+                time_ago = datetime.now() - action_time
+                hours_ago = int(time_ago.total_seconds() / 3600)
+
+                if hours_ago < 1:
+                    time_text = "только что"
+                elif hours_ago < 24:
+                    time_text = f"{hours_ago} ч. назад"
+                else:
+                    days = hours_ago // 24
+                    time_text = f"{days} д. назад"
+            else:
+                time_text = "неизвестно"
+
+            message += f"{i}. {action_name} - <i>{time_text}</i>\n"
+
+        await update.message.reply_text(message, parse_mode='HTML')
+
+    except ValueError:
+        await update.message.reply_text("❌ Неверный формат ID пользователя.")
+    except Exception as e:
+        logger.error(f"Ошибка при показе детальной статистики пользователя: {e}")
+        await update.message.reply_text("❌ Ошибка при загрузке статистики.")

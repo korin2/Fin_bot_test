@@ -1,5 +1,6 @@
 import asyncpg
 import os
+import logger
 from contextlib import asynccontextmanager
 
 DATABASE_URL = os.getenv('DATABASE_URL')
@@ -62,6 +63,212 @@ async def init_db():
     except Exception as e:
         print(f"Ошибка при создании таблиц: {e}")
         raise
+
+        # В db.py добавляем новую таблицу
+async def init_db():
+    """Инициализация базы данных и создание таблиц"""
+    try:
+        conn = await asyncpg.connect(DATABASE_URL)
+
+        # Существующие таблицы...
+
+        # Создаем таблицу user_actions для статистики использования
+        await conn.execute('''
+            CREATE TABLE IF NOT EXISTS user_actions (
+                id SERIAL PRIMARY KEY,
+                user_id BIGINT NOT NULL,
+                action_type TEXT NOT NULL,
+                action_name TEXT NOT NULL,
+                details JSONB,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+            );
+        ''')
+
+        # Создаем индекс для быстрого поиска по пользователю и действию
+        await conn.execute('''
+            CREATE INDEX IF NOT EXISTS idx_user_actions_user_id ON user_actions(user_id);
+        ''')
+
+        await conn.execute('''
+            CREATE INDEX IF NOT EXISTS idx_user_actions_action_type ON user_actions(action_type);
+        ''')
+
+        await conn.execute('''
+            CREATE INDEX IF NOT EXISTS idx_user_actions_created_at ON user_actions(created_at);
+        ''')
+
+        await conn.close()
+        print("✅ Таблицы созданы успешно")
+    except Exception as e:
+        print(f"Ошибка при создании таблиц: {e}")
+        raise
+
+# Добавляем функции для работы со статистикой
+async def log_user_action(user_id: int, action_type: str, action_name: str, details: dict = None):
+    """Логирует действие пользователя в базу данных"""
+    try:
+        conn = await asyncpg.connect(DATABASE_URL)
+        await conn.execute('''
+            INSERT INTO user_actions (user_id, action_type, action_name, details)
+            VALUES ($1, $2, $3, $4)
+        ''', user_id, action_type, action_name, details)
+        await conn.close()
+    except Exception as e:
+        print(f"Ошибка при логировании действия пользователя: {e}")
+
+async def get_user_actions_stats(days: int = 30):
+    """Получает статистику действий пользователей за указанное количество дней"""
+    try:
+        conn = await asyncpg.connect(DATABASE_URL)
+
+        # Общая статистика по действиям
+        total_stats = await conn.fetchrow('''
+            SELECT
+                COUNT(*) as total_actions,
+                COUNT(DISTINCT user_id) as unique_users,
+                MIN(created_at) as first_action,
+                MAX(created_at) as last_action
+            FROM user_actions
+            WHERE created_at >= NOW() - INTERVAL '$1 days'
+        ''', days)
+
+        # Статистика по типам действий
+        action_type_stats = await conn.fetch('''
+            SELECT
+                action_type,
+                COUNT(*) as action_count,
+                COUNT(DISTINCT user_id) as unique_users
+            FROM user_actions
+            WHERE created_at >= NOW() - INTERVAL '$1 days'
+            GROUP BY action_type
+            ORDER BY action_count DESC
+        ''', days)
+
+        # Самые популярные действия
+        popular_actions = await conn.fetch('''
+            SELECT
+                action_name,
+                COUNT(*) as action_count,
+                COUNT(DISTINCT user_id) as unique_users
+            FROM user_actions
+            WHERE created_at >= NOW() - INTERVAL '$1 days'
+            GROUP BY action_name
+            ORDER BY action_count DESC
+            LIMIT 15
+        ''', days)
+
+        # Активность по дням
+        daily_activity = await conn.fetch('''
+            SELECT
+                DATE(created_at) as action_date,
+                COUNT(*) as action_count,
+                COUNT(DISTINCT user_id) as unique_users
+            FROM user_actions
+            WHERE created_at >= NOW() - INTERVAL '$1 days'
+            GROUP BY DATE(created_at)
+            ORDER BY action_date DESC
+            LIMIT 30
+        ''', days)
+
+        # Самые активные пользователи
+        active_users = await conn.fetch('''
+            SELECT
+                user_id,
+                COUNT(*) as action_count,
+                MIN(created_at) as first_action,
+                MAX(created_at) as last_action
+            FROM user_actions
+            WHERE created_at >= NOW() - INTERVAL '$1 days'
+            GROUP BY user_id
+            ORDER BY action_count DESC
+            LIMIT 10
+        ''', days)
+
+        await conn.close()
+
+        return {
+            'total_stats': dict(total_stats) if total_stats else {},
+            'action_type_stats': [dict(row) for row in action_type_stats],
+            'popular_actions': [dict(row) for row in popular_actions],
+            'daily_activity': [dict(row) for row in daily_activity],
+            'active_users': [dict(row) for row in active_users]
+        }
+
+    except Exception as e:
+        print(f"Ошибка при получении статистики действий: {e}")
+        return {}
+
+async def get_user_detailed_stats(user_id: int, days: int = 30):
+    """Получает детальную статистику по конкретному пользователю"""
+    try:
+        conn = await asyncpg.connect(DATABASE_URL)
+
+        # Общая статистика пользователя
+        user_stats = await conn.fetchrow('''
+            SELECT
+                COUNT(*) as total_actions,
+                MIN(created_at) as first_action,
+                MAX(created_at) as last_action,
+                COUNT(DISTINCT action_type) as unique_action_types,
+                COUNT(DISTINCT action_name) as unique_actions
+            FROM user_actions
+            WHERE user_id = $1 AND created_at >= NOW() - INTERVAL '$2 days'
+        ''', user_id, days)
+
+        # Действия по типам
+        user_actions_by_type = await conn.fetch('''
+            SELECT
+                action_type,
+                COUNT(*) as action_count,
+                MIN(created_at) as first_action,
+                MAX(created_at) as last_action
+            FROM user_actions
+            WHERE user_id = $1 AND created_at >= NOW() - INTERVAL '$2 days'
+            GROUP BY action_type
+            ORDER BY action_count DESC
+        ''', user_id, days)
+
+        # Последние действия
+        recent_actions = await conn.fetch('''
+            SELECT
+                action_type,
+                action_name,
+                details,
+                created_at
+            FROM user_actions
+            WHERE user_id = $1
+            ORDER BY created_at DESC
+            LIMIT 20
+        ''', user_id)
+
+        await conn.close()
+
+        return {
+            'user_stats': dict(user_stats) if user_stats else {},
+            'user_actions_by_type': [dict(row) for row in user_actions_by_type],
+            'recent_actions': [dict(row) for row in recent_actions]
+        }
+
+    except Exception as e:
+        print(f"Ошибка при получении детальной статистики пользователя: {e}")
+        return {}
+
+async def get_user_info(user_id: int):
+    """Получает информацию о пользователе"""
+    try:
+        conn = await asyncpg.connect(DATABASE_URL)
+        user = await conn.fetchrow('''
+            SELECT user_id, first_name, username, created_at
+            FROM users
+            WHERE user_id = $1
+        ''', user_id)
+        await conn.close()
+        return dict(user) if user else None
+    except Exception as e:
+        print(f"Ошибка при получении информации о пользователе: {e}")
+        return None
+
 
 async def update_user_info(user_id: int, first_name: str, username: str = None):
     """Обновление информации о пользователе"""
