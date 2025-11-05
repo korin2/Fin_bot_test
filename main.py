@@ -99,6 +99,9 @@ def main():
         application.add_handler(CommandHandler("status", status_command))
         application.add_handler(CommandHandler("logs", logs_command))
         application.add_handler(CommandHandler("clearlogs", clear_logs_command))
+        application.add_handler(CommandHandler("cache_stats", cache_stats_command))
+        application.add_handler(CommandHandler("refresh_cache", refresh_cache_command))
+        application.add_handler(CommandHandler("clear_cache", clear_cache_command))
 
         # Обработчики кнопок и сообщений
         application.add_handler(CallbackQueryHandler(button_handler))
