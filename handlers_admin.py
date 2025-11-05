@@ -155,12 +155,12 @@ async def cache_stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE
             return
 
         log_user_action(update.effective_user.id, "view_cache_stats")
-        
+
         stats = get_cache_stats()
-        
+
         message = "💾 <b>СТАТИСТИКА КЭША</b>\n\n"
         message += f"📊 <b>Всего записей:</b> {stats['total_entries']}\n\n"
-        
+
         if stats['entries']:
             message += "📋 <b>Записи кэша:</b>\n"
             for key, info in stats['entries'].items():
@@ -173,14 +173,14 @@ async def cache_stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE
                 )
         else:
             message += "📭 <i>Кэш пуст</i>\n\n"
-            
+
         message += "💡 <b>График обновления:</b>\n"
         message += "• 💱 Курсы валют: каждый час\n"
-        message += "• 💎 Ключевая ставка: раз в 24 часа\n" 
+        message += "• 💎 Ключевая ставка: раз в 24 часа\n"
         message += "• 📊 RUONIA: раз в 24 часа\n"
         message += "• ₿ Криптовалюты: каждые 30 минут\n"
         message += "• 🌤️ Погода: каждые 30 минут\n\n"
-        
+
         message += "🔄 <i>Используйте кнопки ниже для управления кэшем</i>"
 
         # 🔄 ИСПОЛЬЗУЕМ KeyboardButton И ReplyKeyboardMarkup
@@ -191,7 +191,7 @@ async def cache_stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE
             [KeyboardButton("🔙 Назад к админ-панели")]
         ]
         reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-        
+
         await update.message.reply_text(message, parse_mode='HTML', reply_markup=reply_markup)
 
     except Exception as e:
@@ -206,22 +206,22 @@ async def refresh_cache_command(update: Update, context: ContextTypes.DEFAULT_TY
             return
 
         log_user_action(update.effective_user.id, "refresh_cache")
-        
+
         # 🔄 ОЧИЩАЕМ КЭШ
         success = force_refresh_cache()
-        
+
         if success:
             message = (
                 "🔄 <b>КЭШ ОБНОВЛЕН</b>\n\n"
                 "✅ Все данные кэша принудительно обновлены.\n\n"
                 "⏳ <i>Загружаем свежие данные от API...</i>"
             )
-            
+
             await update.message.reply_text(message, parse_mode='HTML')
-            
+
             # 🔄 ЗАПОЛНЯЕМ КЭШ СВЕЖИМИ ДАННЫМИ
             await preload_cache_data()
-            
+
             message = (
                 "✅ <b>КЭШ ЗАПОЛНЕН</b>\n\n"
                 "💾 Все основные данные загружены в кэш:\n"
@@ -234,12 +234,12 @@ async def refresh_cache_command(update: Update, context: ContextTypes.DEFAULT_TY
             )
         else:
             message = "❌ <b>Ошибка при обновлении кэша</b>"
-            
+
         await update.message.reply_text(message, parse_mode='HTML')
-        
+
         # Показываем обновленную статистику
         await cache_stats_command(update, context)
-        
+
     except Exception as e:
         logger.error(f"Ошибка при обновлении кэша: {e}")
         await update.message.reply_text("❌ Ошибка при обновлении кэша.")
@@ -248,7 +248,7 @@ async def preload_cache_data():
     """Предварительно загружает данные в кэш"""
     try:
         logger.info("🔄 Предварительная загрузка данных в кэш...")
-        
+
         # 💱 Курсы валют
         try:
             from api_currency import get_currency_rates_with_history
@@ -256,7 +256,7 @@ async def preload_cache_data():
             logger.info("✅ Курсы валют загружены в кэш")
         except Exception as e:
             logger.error(f"❌ Ошибка загрузки курсов валют: {e}")
-        
+
         # 💎 Ключевая ставка
         try:
             from api_keyrate import get_key_rate
@@ -264,7 +264,7 @@ async def preload_cache_data():
             logger.info("✅ Ключевая ставка загружена в кэш")
         except Exception as e:
             logger.error(f"❌ Ошибка загрузки ключевой ставки: {e}")
-        
+
         # 📊 RUONIA
         try:
             from api_ruonia import get_ruonia_rate
@@ -272,7 +272,7 @@ async def preload_cache_data():
             logger.info("✅ RUONIA загружена в кэш")
         except Exception as e:
             logger.error(f"❌ Ошибка загрузки RUONIA: {e}")
-        
+
         # ₿ Криптовалюты
         try:
             from api_crypto import get_crypto_rates
@@ -280,7 +280,7 @@ async def preload_cache_data():
             logger.info("✅ Криптовалюты загружены в кэш")
         except Exception as e:
             logger.error(f"❌ Ошибка загрузки криптовалют: {e}")
-        
+
         # 🌤️ Погода
         try:
             from api_weather import get_weather_moscow
@@ -288,9 +288,9 @@ async def preload_cache_data():
             logger.info("✅ Погода загружена в кэш")
         except Exception as e:
             logger.error(f"❌ Ошибка загрузки погоды: {e}")
-        
+
         logger.info("🎯 Предварительная загрузка кэша завершена")
-        
+
     except Exception as e:
         logger.error(f"❌ Ошибка предварительной загрузки кэша: {e}")
 
@@ -302,9 +302,9 @@ async def clear_cache_command(update: Update, context: ContextTypes.DEFAULT_TYPE
             return
 
         log_user_action(update.effective_user.id, "clear_cache")
-        
+
         success = clear_cache()
-        
+
         if success:
             message = (
                 "🧹 <b>КЭШ ОЧИЩЕН</b>\n\n"
@@ -313,12 +313,12 @@ async def clear_cache_command(update: Update, context: ContextTypes.DEFAULT_TYPE
             )
         else:
             message = "❌ <b>Ошибка при очистке кэша</b>"
-            
+
         await update.message.reply_text(message, parse_mode='HTML')
-        
+
         # 🔄 ПОКАЗЫВАЕМ СТАТИСТИКУ ПОСЛЕ ОЧИСТКИ
         await cache_stats_command(update, context)
-        
+
     except Exception as e:
         logger.error(f"Ошибка при очистке кэша: {e}")
         await update.message.reply_text("❌ Ошибка при очистке кэша.")
@@ -333,23 +333,23 @@ async def cache_schedule_command(update: Update, context: ContextTypes.DEFAULT_T
             return
 
         log_user_action(update.effective_user.id, "view_cache_schedule")
-        
+
         from cache import get_cache_schedule, update_cache_schedule
-        
+
         schedule = get_cache_schedule()
-        
+
         message = "⏰ <b>РАСПИСАНИЕ ОБНОВЛЕНИЯ КЭША</b>\n\n"
         message += "<i>Текущее расписание (Московское время):</i>\n\n"
-        
+
         for key, times in schedule.items():
             emoji = {
                 'currency_rates': '💱',
-                'key_rate': '💎', 
+                'key_rate': '💎',
                 'ruonia_rate': '📊',
                 'crypto_rates': '₿',
                 'weather': '🌤️'
             }.get(key, '📝')
-            
+
             key_name = {
                 'currency_rates': 'Курсы валют',
                 'key_rate': 'Ключевая ставка',
@@ -357,14 +357,14 @@ async def cache_schedule_command(update: Update, context: ContextTypes.DEFAULT_T
                 'crypto_rates': 'Криптовалюты',
                 'weather': 'Погода'
             }.get(key, key)
-            
+
             message += f"{emoji} <b>{key_name}:</b>\n"
             if times:
                 message += f"   🕒 {', '.join(times)} МСК\n"
             else:
                 message += f"   ⚠️ Не настроено\n"
             message += "\n"
-        
+
         message += "💡 <b>Формат времени:</b> ЧЧ:ММ (24-часовой формат)\n"
         message += "📝 <b>Пример команды для изменения:</b>\n"
         message += "<code>/set_schedule currency_rates 07:00,10:00,13:00,16:00</code>\n\n"
@@ -377,7 +377,7 @@ async def cache_schedule_command(update: Update, context: ContextTypes.DEFAULT_T
             [KeyboardButton("🔙 Назад к админ-панели")]
         ]
         reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-        
+
         await update.message.reply_text(message, parse_mode='HTML', reply_markup=reply_markup)
 
     except Exception as e:
@@ -396,12 +396,14 @@ async def set_schedule_command(update: Update, context: ContextTypes.DEFAULT_TYP
                 "📝 <b>Использование:</b>\n"
                 "<code>/set_schedule &lt;тип&gt; &lt;время1&gt;,&lt;время2&gt;,...</code>\n\n"
                 "💡 <b>Примеры:</b>\n"
-                "<code>/set_schedule currency_rates 07:00,10:00,13:00,16:00</code>\n"
+                "<code>/set_schedule currency_rates 07:00,10:00,13:00,16:00,19:00</code>\n"
                 "<code>/set_schedule key_rate 08:00</code>\n"
-                "<code>/set_schedule crypto_rates 09:00,12:00,15:00,18:00,21:00</code>\n\n"
+                "<code>/set_schedule ruonia_rate 08:00,12:00,16:00</code>\n"
+                "<code>/set_schedule crypto_rates 09:00,12:00,15:00,18:00,21:00</code>\n"
+                "<code>/set_schedule weather 06:00,12:00,18:00,22:00</code>\n\n"
                 "📋 <b>Доступные типы:</b>\n"
                 "• currency_rates - Курсы валют\n"
-                "• key_rate - Ключевая ставка\n" 
+                "• key_rate - Ключевая ставка\n"
                 "• ruonia_rate - RUONIA\n"
                 "• crypto_rates - Криптовалюты\n"
                 "• weather - Погода",
@@ -410,8 +412,13 @@ async def set_schedule_command(update: Update, context: ContextTypes.DEFAULT_TYP
             return
 
         key_type = context.args[0].lower()
-        times_str = context.args[1]
-        
+
+        # 🔄 ИСПРАВЛЕНИЕ: Объединяем все оставшиеся аргументы в одну строку
+        times_str = ' '.join(context.args[1:])
+
+        # 🔄 ИСПРАВЛЕНИЕ: Разделяем по запятым и убираем лишние пробелы
+        times = [t.strip() for t in times_str.split(',') if t.strip()]
+
         # Валидация типа
         valid_types = ['currency_rates', 'key_rate', 'ruonia_rate', 'crypto_rates', 'weather']
         if key_type not in valid_types:
@@ -419,24 +426,41 @@ async def set_schedule_command(update: Update, context: ContextTypes.DEFAULT_TYP
                 f"❌ Неверный тип данных. Доступные: {', '.join(valid_types)}"
             )
             return
-        
-        # Парсим времена
-        times = [t.strip() for t in times_str.split(',')]
-        
+
+        # 🔄 ИСПРАВЛЕНИЕ: Проверяем что есть хотя бы одно время
+        if not times:
+            await update.message.reply_text(
+                "❌ Не указано ни одного времени.\n"
+                "💡 Пример: <code>/set_schedule ruonia_rate 08:00,12:00,16:00</code>",
+                parse_mode='HTML'
+            )
+            return
+
         # Валидация формата времени
+        invalid_times = []
+        valid_times = []
+
         for time_str in times:
             try:
+                # Проверяем формат ЧЧ:ММ
                 datetime.strptime(time_str, '%H:%M')
+                valid_times.append(time_str)
             except ValueError:
-                await update.message.reply_text(
-                    f"❌ Неверный формат времени: {time_str}\n"
-                    "💡 Используйте формат ЧЧ:ММ (например, 08:00)"
-                )
-                return
-        
+                invalid_times.append(time_str)
+
+        if invalid_times:
+            await update.message.reply_text(
+                f"❌ Неверный формат времени: {', '.join(invalid_times)}\n"
+                "💡 Используйте формат ЧЧ:ММ (например, 08:00 или 14:30)"
+            )
+            return
+
+        # 🔄 ИСПРАВЛЕНИЕ: Сортируем времена для удобства
+        valid_times.sort()
+
         from cache import update_cache_schedule
-        success = update_cache_schedule(key_type, times)
-        
+        success = update_cache_schedule(key_type, valid_times)
+
         if success:
             key_names = {
                 'currency_rates': 'Курсы валют',
@@ -445,18 +469,19 @@ async def set_schedule_command(update: Update, context: ContextTypes.DEFAULT_TYP
                 'crypto_rates': 'Криптовалюты',
                 'weather': 'Погода'
             }
-            
+
             message = (
                 f"✅ <b>РАСПИСАНИЕ ОБНОВЛЕНО</b>\n\n"
                 f"📝 <b>{key_names.get(key_type, key_type)}</b>\n"
-                f"🕒 <b>Новое расписание:</b> {', '.join(times)} МСК\n\n"
+                f"🕒 <b>Новое расписание:</b> {', '.join(valid_times)} МСК\n"
+                f"📊 <b>Количество обновлений в день:</b> {len(valid_times)}\n\n"
                 f"💡 <i>Кэш будет автоматически обновляться в указанное время</i>"
             )
         else:
             message = "❌ <b>Ошибка при обновлении расписания</b>"
-            
+
         await update.message.reply_text(message, parse_mode='HTML')
-        
+
     except Exception as e:
         logger.error(f"Ошибка при установке расписания: {e}")
         await update.message.reply_text("❌ Ошибка при установке расписания.")
