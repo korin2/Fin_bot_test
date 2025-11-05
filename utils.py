@@ -138,6 +138,7 @@ def create_admin_functions_keyboard():
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
+
 def create_cache_management_keyboard():
     """Создает клавиатуру для управления кэшем"""
     keyboard = [
