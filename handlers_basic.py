@@ -1,5 +1,6 @@
 # handlers_basic.py
 import logging
+import requests
 from telegram import Update, KeyboardButton, ReplyKeyboardMarkup  # Добавляем импорты
 from telegram.ext import ContextTypes
 from config import logger, ADMIN_IDS, BOT_VERSION, BOT_LAST_UPDATE, BOT_CREATION_DATE
@@ -376,46 +377,56 @@ async def show_admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             "📊 <b>API статусы:</b>\n"
         )
 
-        # Проверяем статусы API
-        from api_currency import get_currency_rates_for_date
-        from api_crypto import get_crypto_rates
-        from config import DEEPSEEK_API_KEY, WEATHER_API_KEY, COINGECKO_API_KEY
-
+        # 🔄 ИСПРАВЛЕНИЕ: ПРОВЕРЯЕМ СТАТУС API БЕЗ ЗАГРУЗКИ ДАННЫХ
         # ЦБ РФ
         try:
-            rates, _ = get_currency_rates_for_date(datetime.now().strftime('%d/%m/%Y'))
+            import requests
+            # Простой запрос для проверки доступности ЦБ РФ
+            response = requests.get("https://www.cbr.ru/scripts/XML_daily.asp", timeout=5)
             system_info += "• ЦБ РФ: ✅ Работает\n"
         except:
             system_info += "• ЦБ РФ: ❌ Ошибка\n"
 
         # CoinGecko
-        crypto_data = get_crypto_rates()
-        if crypto_data and crypto_data.get('source') == 'coingecko':
-            system_info += f"• CoinGecko: ✅ Работает ({'API ключ' if COINGECKO_API_KEY else 'бесплатно'})\n"
-        else:
-            system_info += f"• CoinGecko: ❌ Ошибка\n"
+        try:
+            # Простой запрос для проверки доступности CoinGecko
+            response = requests.get("https://api.coingecko.com/api/v3/ping", timeout=5)
+            if response.status_code == 200:
+                from config import COINGECKO_API_KEY
+                status = "API ключ" if COINGECKO_API_KEY else "бесплатно"
+                system_info += f"• CoinGecko: ✅ Работает ({status})\n"
+            else:
+                system_info += "• CoinGecko: ❌ Ошибка\n"
+        except:
+            system_info += "• CoinGecko: ❌ Ошибка\n"
 
         # DeepSeek
+        from config import DEEPSEEK_API_KEY
         system_info += f"• DeepSeek AI: {'✅ Доступен' if DEEPSEEK_API_KEY else '❌ Не настроен'}\n"
 
         # Погода
-        system_info += f"• Погода: {'✅ Настроена' if WEATHER_API_KEY and WEATHER_API_KEY != 'demo_key_12345' else '⚠️ Демо-данные'}\n\n"
+        from config import WEATHER_API_KEY
+        weather_status = "✅ Настроена" if WEATHER_API_KEY and WEATHER_API_KEY != 'demo_key_12345' else '⚠️ Демо-данные'
+        system_info += f"• Погода: {weather_status}\n\n"
 
-        # 🔄 ДОБАВЛЯЕМ ИНФОРМАЦИЮ О КЭШЕ
+        # 🔄 ИНФОРМАЦИЯ О КЭШЕ (без загрузки данных)
         try:
             from cache import get_cache_stats
             cache_stats = get_cache_stats()
-            system_info += f"💾 <b>Кэш:</b> {cache_stats['total_entries']} записей\n\n"
-        except:
-            system_info += "💾 <b>Кэш:</b> ❌ Не доступен\n\n"
+            cache_status = f"{cache_stats['total_entries']} записей"
+        except Exception as e:
+            cache_status = "❌ Не доступен"
+            logger.error(f"Ошибка получения статистики кэша: {e}")
+
+        system_info += f"💾 <b>Кэш:</b> {cache_status}\n\n"
 
         system_info += (
-            "💡 <b>Доступные команды:</b>\n"
-            "/status - Детальный статус системы\n"
-            "/logs - Просмотр логов\n"
-            "/clearlogs - Очистка логов\n"
-            "/cache_stats - Статистика кэша\n"
-            "/cache_schedule - Расписание кэша\n\n"
+            "💡 <b>Доступные функции:</b>\n"
+            "• 📊 Статистика системы\n"
+            "• 💾 Статистика кэша\n"
+            "• ⏰ Расписание кэша\n"
+            "• 🔧 Настройки бота\n"
+            "• 📋 Логи бота\n\n"
 
             "🔒 <i>Эта панель доступна только администраторам</i>"
         )
