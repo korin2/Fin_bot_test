@@ -109,6 +109,8 @@ def main():
         application.add_handler(CommandHandler("cache_stats", cache_stats_command))  # 🔄 НОВАЯ КОМАНДА
         application.add_handler(CommandHandler("refresh_cache", refresh_cache_command))  # 🔄 НОВАЯ КОМАНДА
         application.add_handler(CommandHandler("clear_cache", clear_cache_command))  # 🔄 НОВАЯ КОМАНДА
+        application.add_handler(CommandHandler("cache_schedule", cache_schedule_command))  # 🔄 НОВАЯ
+        application.add_handler(CommandHandler("set_schedule", set_schedule_command))      # 🔄 НОВАЯ
 
         # Обработчики кнопок и сообщений
         application.add_handler(CallbackQueryHandler(button_handler))
