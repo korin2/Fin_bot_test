@@ -332,6 +332,7 @@ async def myid_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         reply_markup=create_main_reply_keyboard()
     )
 
+
 async def show_admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Показывает административную панель (только для администраторов)"""
     try:
@@ -400,11 +401,21 @@ async def show_admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         # Погода
         system_info += f"• Погода: {'✅ Настроена' if WEATHER_API_KEY and WEATHER_API_KEY != 'demo_key_12345' else '⚠️ Демо-данные'}\n\n"
 
+        # 🔄 ДОБАВЛЯЕМ ИНФОРМАЦИЮ О КЭШЕ
+        try:
+            from cache import get_cache_stats
+            cache_stats = get_cache_stats()
+            system_info += f"💾 <b>Кэш:</b> {cache_stats['total_entries']} записей\n\n"
+        except:
+            system_info += "💾 <b>Кэш:</b> ❌ Не доступен\n\n"
+
         system_info += (
             "💡 <b>Доступные команды:</b>\n"
             "/status - Детальный статус системы\n"
             "/logs - Просмотр логов\n"
-            "/clearlogs - Очистка логов\n\n"
+            "/clearlogs - Очистка логов\n"
+            "/cache_stats - Статистика кэша\n"
+            "/cache_schedule - Расписание кэша\n\n"
 
             "🔒 <i>Эта панель доступна только администраторам</i>"
         )
