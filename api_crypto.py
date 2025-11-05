@@ -1,13 +1,28 @@
-# api_crypto.py - полностью обновляем для работы с API ключом
+# api_crypto.py - полностью обновляем для работы с кэшированием
 import requests
 import json
 from datetime import datetime, timezone, timedelta
 import logging
 from config import logger, COINGECKO_API_BASE, COINGECKO_API_KEY
 
+# 🔄 ДОБАВЛЯЕМ ИМПОРТ ДЛЯ КЭШИРОВАНИЯ
+from cache import get_cache, set_cache
+
 def get_crypto_rates():
-    """Получает курсы криптовалют через CoinGecko API с использованием API ключа"""
+    """Получает курсы криптовалют через CoinGecko API с использованием API ключа И КЭШИРОВАНИЯ"""
     try:
+        # 🎯 ПРОВЕРЯЕМ КЭШ ПЕРВЫМ ДЕЛОМ
+        cache_key = "crypto_rates"
+        cached_data = get_cache(cache_key)
+
+        # ✅ ЕСЛИ ДАННЫЕ ЕСТЬ В КЭШЕ - ВОЗВРАЩАЕМ ИХ
+        if cached_data:
+            logger.info("💾 Используются кэшированные данные криптовалют")
+            return cached_data
+
+        # 🔄 ЕСЛИ ДАННЫХ НЕТ В КЭШЕ - ЗАПРАШИВАЕМ У API
+        logger.info("🌐 Запрашиваем свежие данные криптовалют у CoinGecko API")
+
         # Основные криптовалюты для отслеживания
         crypto_ids = [
             'bitcoin', 'ethereum', 'binancecoin', 'ripple', 'cardano',
@@ -125,6 +140,11 @@ def get_crypto_rates():
             crypto_rates['rate_limit'] = False
             crypto_rates['auth_error'] = False
             crypto_rates['api_key_used'] = bool(COINGECKO_API_KEY)
+
+            # 💾 СОХРАНЯЕМ РЕЗУЛЬТАТ В КЭШ
+            set_cache(cache_key, crypto_rates)
+            logger.info("💾 Данные криптовалют сохранены в кэш на 30 минут")
+
             return crypto_rates
         else:
             logger.error("Не найдено валидных данных по криптовалютам в ответе API")
@@ -144,8 +164,19 @@ def get_crypto_rates():
         return get_crypto_rates_fallback()
 
 def get_crypto_rates_fallback(rate_limit=False, auth_error=False):
-    """Резервная функция для получения курсов криптовалют (демо-данные)"""
+    """Резервная функция для получения курсов криптовалют (демо-данные) С КЭШИРОВАНИЕМ"""
     try:
+        # 🎯 ПРОВЕРЯЕМ КЭШ ДЛЯ FALLBACK ДАННЫХ
+        cache_key = "crypto_rates_fallback"
+        cached_data = get_cache(cache_key)
+
+        if cached_data:
+            logger.info("💾 Используются кэшированные демо-данные криптовалют")
+            return cached_data
+
+        # 🔄 ЕСЛИ ДАННЫХ НЕТ В КЭШЕ - СОЗДАЕМ ДЕМО-ДАННЫЕ
+        logger.info("🔄 Используем демо-данные криптовалют")
+
         # Демо-данные на случай недоступности API
         crypto_rates = {
             'bitcoin': {
@@ -221,7 +252,10 @@ def get_crypto_rates_fallback(rate_limit=False, auth_error=False):
         crypto_rates['auth_error'] = auth_error
         crypto_rates['api_key_used'] = False
 
-        logger.info("Используются демо-данные криптовалют")
+        # 💾 СОХРАНЯЕМ FALLBACK ДАННЫЕ В КЭШ
+        set_cache(cache_key, crypto_rates)
+        logger.info("💾 Демо-данные криптовалют сохранены в кэш на 30 минут")
+
         return crypto_rates
 
     except Exception as e:
@@ -319,4 +353,24 @@ def format_crypto_rates_message(crypto_rates: dict) -> str:
     else:
         message += "💡 <i>Данные обновятся при восстановлении доступа к CoinGecko API</i>"
 
+    # 🔄 ДОБАВЛЯЕМ ИНФОРМАЦИЮ О КЭШИРОВАНИИ
+    message += f"\n\n💾 <i>Данные обновляются каждые 30 минут</i>"
+
     return message
+
+# 🔧 ДОБАВЛЯЕМ ФУНКЦИЮ ПРИНУДИТЕЛЬНОГО ОБНОВЛЕНИЯ
+def refresh_crypto_cache():
+    """Принудительно обновляет кэш криптовалют"""
+    try:
+        from cache import force_refresh_cache
+
+        # Очищаем кэш для криптовалют
+        force_refresh_cache("crypto_rates")
+        force_refresh_cache("crypto_rates_fallback")
+
+        logger.info("🔄 Кэш криптовалют принудительно обновлен")
+        return True
+
+    except Exception as e:
+        logger.error(f"Ошибка при обновлении кэша криптовалют: {e}")
+        return False
