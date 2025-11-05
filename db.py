@@ -1,7 +1,8 @@
 import asyncpg
 import os
-import logger
 from contextlib import asynccontextmanager
+import logging
+from config import logger
 
 DATABASE_URL = os.getenv('DATABASE_URL')
 
