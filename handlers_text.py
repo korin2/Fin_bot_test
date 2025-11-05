@@ -18,7 +18,7 @@ async def handle_text_messages(update: Update, context: ContextTypes.DEFAULT_TYP
         logger.info(f"Получено сообщение: '{user_message}' от пользователя {user_id}")
 
         # Обработка административных функций
-        if user_message == "👑 Админ-панель" and user_id in ADMIN_IDS:
+        elif user_message == "👑 Админ-панель" and user_id in ADMIN_IDS:
             from handlers_basic import show_admin_panel
             await show_admin_panel(update, context)
             return
@@ -36,6 +36,12 @@ async def handle_text_messages(update: Update, context: ContextTypes.DEFAULT_TYP
         elif user_message == "📋 Логи бота" and user_id in ADMIN_IDS:
             from handlers_admin import logs_command
             await logs_command(update, context)
+            return
+
+        # 🔄 ДОБАВЛЯЕМ ОБРАБОТКУ НОВОЙ КНОПКИ
+        elif user_message == "⏰ Расписание кэша" and user_id in ADMIN_IDS:
+            from handlers_admin import cache_schedule_command
+            await cache_schedule_command(update, context)
             return
 
         elif user_message == "🔙 Назад к функциям":
